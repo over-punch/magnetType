@@ -1,12 +1,14 @@
 # magnetType
 
-[![npm](https://img.shields.io/npm/v/%40liiift-studio%2Fmagnettype.svg)](https://www.npmjs.com/package/@liiift-studio/magnettype) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![part of liiift type-tools](https://img.shields.io/badge/liiift-type--tools-blueviolet)](https://github.com/Liiift-Studio/type-tools)
+[![npm](https://img.shields.io/npm/v/%40liiift-studio%2Fmagnettype.svg)](https://www.npmjs.com/package/@liiift-studio/magnettype) [![minzipped size](https://img.shields.io/bundlephobia/minzip/%40liiift-studio%2Fmagnettype)](https://bundlephobia.com/package/@liiift-studio/magnettype) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![part of liiift type-tools](https://img.shields.io/badge/liiift-type--tools-blueviolet)](https://github.com/Liiift-Studio/type-tools)
 
-CSS `font-variation-settings` applies a single value to the whole element — there is no native way to drive axis values per word from cursor proximity, to selectively widen visually confusable characters for legibility, or to vary weight per-character across a block element. magnetType adds all three.
+**Type that responds to your cursor.** As the cursor sweeps across the text, each word — or each character — pulls toward a heavier weight, then settles back as it passes. CSS `font-variation-settings` applies a single value to the whole element, with no native way to drive axis values per word from cursor proximity, to selectively widen visually confusable characters for legibility, or to vary weight per-character across a block element. magnetType adds all three.
 
-**[magnettype.com](https://magnettype.com)** · [npm](https://www.npmjs.com/package/@liiift-studio/magnettype) · [GitHub](https://github.com/Liiift-Studio/MagnetType)
+![magnetType word mode: the words nearest the cursor swell toward a bold weight, fading back to light at the edges](https://raw.githubusercontent.com/Liiift-Studio/magnetType/master/assets/hero.gif?v=1)
 
-TypeScript · Zero dependencies · React + Vanilla JS
+**[Try the live demo at magnettype.com →](https://magnettype.com)** · [npm](https://www.npmjs.com/package/@liiift-studio/magnettype) · [GitHub](https://github.com/Liiift-Studio/MagnetType)
+
+TypeScript · Zero dependencies (~6 kB gzipped) · React + Vanilla JS
 
 ---
 
@@ -17,6 +19,54 @@ npm install @liiift-studio/magnettype
 ```
 
 > **Variable font required:** magnetType sets `font-variation-settings` per word or per character. The target font must support the axes you specify (e.g. a font with a `wght` axis for weight-based effects, or a `wdth` axis for legibility mode). The effect is invisible with non-variable fonts.
+
+**Axis jargon, decoded:** variable fonts expose adjustable *axes*, each a four-letter tag. `wght` is **weight** (boldness), `wdth` is **width**, `opsz` is **optical size**. An axis range like `[300, 700]` means "interpolate from 300 (light) up to 700 (bold)" as the cursor approaches. magnetType drives these axes live; CSS can only set them once.
+
+**Compatibility:** ~6 kB gzipped, zero runtime dependencies. React 17+ is an optional peer dependency — the core algorithm and vanilla-JS API run with no framework. Requires a browser that supports variable fonts and `font-variation-settings` (all evergreen browsers; Chrome/Edge 62+, Firefox 62+, Safari 11+). On touch devices with no cursor, field and character modes have no pointer to track; legibility mode applies its boost statically.
+
+---
+
+## Complete example (copy-paste, runs as-is)
+
+The examples below assume a loaded variable font with a `wght` axis. Here is a full setup — load the font, point `font-family` at it, then wrap your text:
+
+```tsx
+import { MagnetTypeText } from '@liiift-studio/magnettype'
+
+// 1. Load a variable font (any font with a `wght` axis works — Inter, Recursive,
+//    Roboto Flex, Source Serif…). Put this in your global CSS:
+//
+//    @font-face {
+//      font-family: 'Recursive';
+//      src: url('/fonts/Recursive_VF.woff2') format('woff2');
+//      font-weight: 300 1000;   /* declare the supported wght range */
+//    }
+
+export default function Hero() {
+  return (
+    <MagnetTypeText
+      mode="word"
+      axes={{ wght: [300, 800] }}   // light → bold as the cursor nears each word
+      radius={150}                   // px from the cursor at which the pull begins
+      falloff="quadratic"
+      style={{ fontFamily: 'Recursive, sans-serif', fontSize: '2rem' }}
+    >
+      Type that responds to presence.
+    </MagnetTypeText>
+  )
+}
+```
+
+> Without a `font-family` resolving to a variable font, the effect is silently invisible — the markup is correct but the glyphs cannot change weight. This is the most common first-run gotcha.
+
+### Word mode vs character mode
+
+| | Word mode (`MagnetTypeText mode="word"`) | Character mode (`MagnetChar`) |
+|---|---|---|
+| Unit affected | whole words | individual characters |
+| Visual | ![word mode still](https://raw.githubusercontent.com/Liiift-Studio/magnetType/master/assets/word.png?v=1) | ![character mode still](https://raw.githubusercontent.com/Liiift-Studio/magnetType/master/assets/char.png?v=1) |
+| Driven by | a continuous `requestAnimationFrame` loop | passive, batched per-frame on `mousemove` / `scroll` |
+| Mixed inline content (links, `<code>`) | — | yes |
 
 ---
 
@@ -227,7 +277,7 @@ Field mode and block mode drive only `font-variation-settings` on per-word or pe
 
 ### `prefers-reduced-motion`
 
-Field mode respects `prefers-reduced-motion: reduce`. If the media query matches at activation time, the function returns immediately without wrapping words or starting the rAF loop. Legibility mode and block mode are not affected.
+All three modes respect `prefers-reduced-motion: reduce`. If the media query matches at activation time, field mode (`startMagnetType`) and legibility mode (`applyMagnetType`) return immediately — restoring the original markup without wrapping words/characters or starting the rAF loop — and block mode (`MagnetChar`) skips attaching its `mousemove`/`scroll` listeners, so the text renders statically at `minWeight`. No cursor-driven motion runs for users who have requested reduced motion.
 
 ---
 
@@ -238,6 +288,16 @@ Field mode respects `prefers-reduced-motion: reduce`. If the media query matches
 `package.json` at the repo root lists `next` as a devDependency. This is a **Vercel detection workaround** — not a real dependency of the npm package. Vercel's build system inspects the root `package.json` to detect the framework; without `next` present it falls back to a static build and skips the Next.js pipeline, breaking the `/site` subdirectory deploy.
 
 The package itself has zero runtime dependencies. Do not remove this entry.
+
+### README visuals
+
+The images in this README are generated by a reproducible Playwright harness in `scripts/`. From the repo root, with `playwright` and `ffmpeg` available:
+
+```bash
+node scripts/capture.mjs   # writes assets/hero.gif, hero.png, word.png, char.png
+```
+
+The harness loads the variable font and reproduces the package's falloff math at frozen cursor positions, then assembles the sweep into a GIF. The `assets/` directory is not part of the published package (`files` ships `dist` only), so these images add nothing to the install size.
 
 ---
 

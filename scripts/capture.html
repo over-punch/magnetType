@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<!--
+	magnetType README capture page.
+	Self-contained: loads the variable Merriweather font and reproduces the
+	cursor-proximity weight gradient with the same falloff math the package uses.
+	Driven by ?scene=… query param. Used by scripts/capture.mjs (Playwright).
+-->
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<style>
+		@font-face {
+			font-family: "Merriweather";
+			src: url("./fonts/Merriweather.woff2") format("woff2");
+			font-weight: 100 900;
+			font-display: block;
+		}
+		html, body {
+			margin: 0;
+			padding: 0;
+			background: transparent;
+		}
+		#card {
+			width: 880px;
+			box-sizing: border-box;
+			padding: 56px 64px;
+			border-radius: 22px;
+			/* magnetType brand hue (golden-angle) — dark card */
+			background: oklch(0.13 0.05 145);
+			color: oklch(0.93 0.03 145);
+			font-family: "Merriweather", serif;
+			font-size: 30px;
+			line-height: 1.62;
+			letter-spacing: 0.005em;
+		}
+		#card.legibility { font-size: 34px; line-height: 1.7; }
+		.tag {
+			display: block;
+			font-family: "Merriweather", serif;
+			font-variation-settings: "wght" 700;
+			font-size: 13px;
+			letter-spacing: 0.22em;
+			text-transform: uppercase;
+			opacity: 0.5;
+			margin-bottom: 22px;
+		}
+		.unit { white-space: pre-wrap; }
+		.w { display: inline-block; }            /* word span */
+		.c { display: inline-block; }            /* char span */
+		/* cursor dot */
+		#cursor {
+			position: absolute;
+			width: 16px; height: 16px;
+			border-radius: 50%;
+			background: oklch(0.93 0.03 145);
+			box-shadow: 0 0 0 7px oklch(0.93 0.12 145 / 0.18), 0 0 26px 6px oklch(0.93 0.16 145 / 0.30);
+			transform: translate(-50%, -50%);
+			pointer-events: none;
+			z-index: 10;
+		}
+	</style>
+</head>
+<body>
+	<div id="card"><span class="tag" id="tag"></span><div id="text"></div></div>
+	<div id="cursor" style="display:none"></div>
+
+	<script>
+		// ── Falloff math (mirrors src/core/adjust.ts) ───────────────────────────
+		// normalised = max(0, 1 − distance / radius); strength = normalised^2 (quadratic)
+		function strengthAt(dist, radius, falloff) {
+			const n = Math.max(0, 1 - dist / radius)
+			return falloff === "linear" ? n : n * n
+		}
+		function lerp(a, b, t) { return a + (b - a) * t }
+
+		const params = new URLSearchParams(location.search)
+		const scene = params.get("scene") || "hero"
+
+		const TEXT = "Variable fonts make every letterform a dial. Move the cursor through the line and the weight follows."
+		const LEGIBILITY = "Illinois milling: tell il, 1I, rn and 0O apart at any size."
+
+		const cardEl = document.getElementById("card")
+		const textEl = document.getElementById("text")
+		const tagEl = document.getElementById("tag")
+		const cursorEl = document.getElementById("cursor")
+
+		// Build per-word or per-char spans.
+		function buildWords(str) {
+			textEl.innerHTML = ""
+			const parts = str.split(/(\s+)/)
+			for (const p of parts) {
+				if (/^\s+$/.test(p)) { textEl.appendChild(document.createTextNode(p)); continue }
+				const s = document.createElement("span")
+				s.className = "w"; s.textContent = p
+				textEl.appendChild(s)
+			}
+			return Array.from(textEl.querySelectorAll(".w"))
+		}
+		function buildChars(str) {
+			textEl.innerHTML = ""
+			for (const ch of str) {
+				if (ch === " ") { textEl.appendChild(document.createTextNode(" ")); continue }
+				const s = document.createElement("span")
+				s.className = "c"; s.textContent = ch
+				textEl.appendChild(s)
+			}
+			return Array.from(textEl.querySelectorAll(".c"))
+		}
+
+		// Apply a frozen cursor at page-x/page-y to a set of unit spans.
+		function applyAt(units, cx, cy, opts) {
+			const { radius, lo, hi, falloff } = opts
+			for (const u of units) {
+				const r = u.getBoundingClientRect()
+				const ux = r.left + r.width / 2
+				const uy = r.top + r.height / 2
+				const d = Math.hypot(cx - ux, cy - uy)
+				const s = strengthAt(d, radius, falloff)
+				u.style.fontVariationSettings = `"wght" ${Math.round(lerp(lo, hi, s))}`
+			}
+		}
+
+		window.__ready = false
+		document.fonts.load('700 30px "Merriweather"').then(() => document.fonts.ready).then(() => {
+			let units, opts, cx, cy
+			if (scene === "hero" || scene === "word") {
+				tagEl.textContent = scene === "hero" ? "magnetType · word mode" : "word mode"
+				units = buildWords(TEXT)
+				opts = { radius: 260, lo: 200, hi: 900, falloff: "quadratic" }
+			} else if (scene === "char") {
+				tagEl.textContent = "character mode"
+				units = buildChars(TEXT)
+				opts = { radius: 150, lo: 220, hi: 900, falloff: "quadratic" }
+			} else if (scene === "legibility") {
+				cardEl.classList.add("legibility")
+				tagEl.textContent = "legibility mode"
+				units = buildChars(LEGIBILITY)
+				// emphasise via width-like weight bump on the page; cursor centred
+				opts = { radius: 220, lo: 380, hi: 760, falloff: "linear" }
+			}
+			// Default frozen cursor: roughly centre of the text block.
+			const tr = textEl.getBoundingClientRect()
+			cx = tr.left + tr.width * 0.46
+			cy = tr.top + tr.height * 0.5
+			applyAt(units, cx, cy, opts)
+			cursorEl.style.display = "block"
+			cursorEl.style.left = cx + "px"
+			cursorEl.style.top = cy + "px"
+
+			// Expose a stepper for animation capture (GIF frames).
+			window.__units = units
+			window.__opts = opts
+			window.__applyAt = (x, y) => {
+				applyAt(units, x, y, opts)
+				cursorEl.style.left = x + "px"
+				cursorEl.style.top = y + "px"
+			}
+			window.__textRect = () => textEl.getBoundingClientRect()
+			window.__ready = true
+		})
+	</script>
+</body>
+</html>
