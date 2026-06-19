@@ -1,6 +1,6 @@
 {
 	"name": "magnet-type-site",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"private": true,
 	"scripts": {
 		"dev": "next dev",
@@ -9,10 +9,10 @@
 		"lint": "eslint"
 	},
 	"dependencies": {
-		"next": "16.2.2",
+		"@liiift-studio/magnettype": "file:..",
+		"next": "^16.2.9",
 		"react": "19.2.4",
-		"react-dom": "19.2.4",
-		"@liiift-studio/magnettype": "file:.."
+		"react-dom": "19.2.4"
 	},
 	"devDependencies": {
 		"@tailwindcss/postcss": "^4",
