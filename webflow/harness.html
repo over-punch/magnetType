@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>magnetType — Webflow embed harness</title>
+
+	<!-- Roboto Flex: a variable font exposing wght + wdth axes, which both magnetType
+	     modes drive. Loaded from Google Fonts so the effect has real axes to animate. -->
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+	<link
+		href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght,wdth@8..144,100..1000,25..151&display=swap"
+		rel="stylesheet"
+	/>
+
+	<style>
+		body {
+			margin: 0;
+			padding: 8vh 8vw;
+			background: #12141a;
+			color: #f2f2f2;
+			font-family: 'Roboto Flex', system-ui, sans-serif;
+			font-variation-settings: 'wght' 400, 'wdth' 100;
+			line-height: 1.4;
+		}
+		h1 { font-size: 14px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.5; font-weight: 400; }
+		.field {
+			font-size: clamp(2rem, 6vw, 4.5rem);
+			max-width: 18ch;
+			margin: 0.4em 0 1.4em;
+			cursor: default;
+		}
+		.legibility {
+			font-size: clamp(1.4rem, 4vw, 2.6rem);
+			max-width: 30ch;
+			margin: 0.4em 0;
+			cursor: default;
+		}
+		.note { margin-top: 3rem; font-size: 14px; line-height: 1.6; opacity: 0.6; max-width: 60ch; }
+		code { background: #222634; padding: 0.1em 0.4em; border-radius: 4px; }
+	</style>
+</head>
+<body>
+	<h1>magnetType · field mode</h1>
+	<p
+		class="field"
+		data-magnettype
+		data-mt-mode="field"
+		data-mt-axes="wght:300,800;wdth:75,125"
+		data-mt-radius="160"
+		data-mt-falloff="quadratic"
+		data-mt-magnet-mode="attract"
+		data-mt-transition-ms="220"
+	>Move your cursor across this line and watch the words swell.</p>
+
+	<h1>magnetType · legibility mode</h1>
+	<p
+		class="legibility"
+		data-magnettype
+		data-mt-mode="legibility"
+		data-mt-wdth-boost="10"
+		data-mt-radius="120"
+	>Illegible: Ill1I lookalikes widen near the cursor for clarity.</p>
+
+	<p class="note">
+		<strong>What "working" looks like:</strong><br />
+		Load this page after building the bundle (<code>npm run build:webflow</code>).
+		Hovering the first paragraph should make each <em>word</em> nearest the cursor grow
+		heavier and wider (wght 300→800, wdth 75→125), easing back over ~220&nbsp;ms when the
+		cursor leaves. In the second paragraph, only the confusable characters
+		(<code>I l 1</code>) should widen as the cursor passes over them, while the rest of the
+		text stays put. With no cursor movement, nothing animates (the rAF loop is idle).
+		<code>window.MagnetType</code> exposes <code>init</code>, <code>destroy</code>, and
+		<code>restart</code> for manual control. Respects <code>prefers-reduced-motion</code>:
+		with it enabled, the plain text renders and no listeners attach.
+	</p>
+
+	<script src="../dist/magnettype.webflow.min.js"></script>
+</body>
+</html>
