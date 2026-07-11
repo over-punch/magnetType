@@ -5,6 +5,7 @@ import ToolDirectory from "@/components/ToolDirectory"
 import { version } from "../../../package.json"
 import { version as siteVersion } from "../../package.json"
 import SiteFooter from "../components/SiteFooter"
+import PortsSection from "../components/PortsSection"
 import { MagnetChar } from "@liiift-studio/magnettype"
 
 export default function Home() {
@@ -124,6 +125,14 @@ const stop = startMagnetType(el, original, { axes: { wght: [300, 600] }, radius:
 					</div>
 				</div>
 			</section>
+
+			<PortsSection
+				npm="@liiift-studio/magnettype"
+				bundle="magnettype"
+				attr="data-magnettype"
+				framerComponent="MagnetType"
+				repo="Liiift-Studio/MagnetType"
+			/>
 
 			<SiteFooter current="magnetType" npmVersion={version} siteVersion={siteVersion} />
 
