@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import "./globals.css"
 import localFont from "next/font/local"
+import SiteHeader from "../components/SiteHeader"
 
 // Self-hosted Inter — eliminates Google Fonts CDN dependency at build time
 const inter = localFont({
@@ -36,7 +37,8 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
 	return (
 		<html lang="en" className={`h-full antialiased ${inter.variable}`}>
-			<body className="min-h-full flex flex-col">{children}</body>
+			<body className="min-h-full flex flex-col">
+				<SiteHeader current="magnetType" githubUrl="https://github.com/Liiift-Studio/magnetType" />{children}</body>
 		</html>
 	)
 }
