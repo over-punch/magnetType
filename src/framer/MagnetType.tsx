@@ -13,7 +13,7 @@ import { useEffect, useRef } from "react"
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
 // Pin to a published version so shared instances stay stable. Bump when the core changes.
 // The core is framework-agnostic (operates on a DOM element), so no React externalisation is needed.
-import { startMagnetType, applyMagnetType, getCleanHTML } from "https://esm.sh/@liiift-studio/magnettype@1.2.6"
+import { startMagnetType, applyMagnetType, getCleanHTML } from "https://esm.sh/@liiift-studio/magnettype@1.2.7"
 
 /** Props surfaced to the Framer UI via addPropertyControls, plus base text styling.
  *  Option fields are declared explicitly so the component needs no type import over HTTP. */
