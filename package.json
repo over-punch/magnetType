@@ -78,10 +78,10 @@
 	"homepage": "https://magnettype.com",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Liiift-Studio/MagnetType.git"
+		"url": "https://github.com/Liiift-Studio/magnetType.git"
 	},
 	"bugs": {
-		"url": "https://github.com/Liiift-Studio/MagnetType/issues"
+		"url": "https://github.com/Liiift-Studio/magnetType/issues"
 	},
 	"sideEffects": false,
 	"publishConfig": {

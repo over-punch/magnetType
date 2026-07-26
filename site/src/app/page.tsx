@@ -23,7 +23,7 @@ export default function Home() {
 				</div>
 				<div className="flex items-center gap-4">
 					<CopyInstall />
-					<a href="https://github.com/Liiift-Studio/MagnetType" className="text-sm text-muted hover:text-foreground transition-colors">GitHub ↗</a>
+					<a href="https://github.com/Liiift-Studio/magnetType" className="text-sm text-muted hover:text-foreground transition-colors">GitHub ↗</a>
 				</div>
 				<div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted tracking-wide">
 					<span>TypeScript</span><span aria-hidden="true">·</span><span>Zero dependencies</span><span aria-hidden="true">·</span><span>React + Vanilla JS</span>

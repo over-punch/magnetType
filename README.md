@@ -6,7 +6,7 @@
 
 ![magnetType word mode: the words nearest the cursor swell toward a bold weight, fading back to light at the edges](https://raw.githubusercontent.com/Liiift-Studio/magnetType/master/assets/hero.gif?v=1)
 
-**[Try the live demo at magnettype.com →](https://magnettype.com)** · [npm](https://www.npmjs.com/package/@liiift-studio/magnettype) · [GitHub](https://github.com/Liiift-Studio/MagnetType)
+**[Try the live demo at magnettype.com →](https://magnettype.com)** · [npm](https://www.npmjs.com/package/@liiift-studio/magnettype) · [GitHub](https://github.com/Liiift-Studio/magnetType)
 
 TypeScript · Zero dependencies (~6 kB gzipped) · React + Vanilla JS
 
