@@ -18,8 +18,11 @@ export interface MagnetCharProps {
 	fixedAxes?: Record<string, number>
 	/**
 	 * Cache character centre positions in page-relative coordinates after first render,
-	 * eliminating getBoundingClientRect calls on every mousemove. The cache is rebuilt on
-	 * resize and after fonts load. Disable if the block lives inside a custom scroll
+	 * eliminating getBoundingClientRect calls on every mousemove. The cache is rebuilt when the
+	 * element resizes, when the viewport resizes, after fonts load, and whenever a per-frame
+	 * check detects the element has moved or changed size since the cache was built (one
+	 * getBoundingClientRect per frame, not one per character).
+	 * Disable if the block lives inside a custom scroll
 	 * container (overflow: scroll on a non-window element) — page coordinates are derived
 	 * from window.scrollX/Y and will be incorrect when a nested element is the scroll parent.
 	 * @default true
@@ -48,6 +51,13 @@ export interface MagnetCharProps {
 
 type CharPos = { cx: number; cy: number }
 type ElemRect = { top: number; left: number; right: number; bottom: number }
+
+/**
+ * Maximum drift, in CSS pixels, tolerated in the element's page geometry before the cached
+ * positions are rebuilt. Sub-pixel to absorb fractional rounding noise from
+ * getBoundingClientRect without triggering spurious rebuilds.
+ */
+const DRIFT_TOLERANCE = 0.5
 
 export const MagnetChar = forwardRef<HTMLElement, MagnetCharProps>(
 	function MagnetChar(
@@ -122,11 +132,33 @@ export const MagnetChar = forwardRef<HTMLElement, MagnetCharProps>(
 			cacheValidRef.current = true
 		}
 
+		/**
+		 * True when the element has moved or resized beyond DRIFT_TOLERANCE since the cache was
+		 * built. Costs a single getBoundingClientRect per frame — regardless of character count —
+		 * and catches layout shifts a ResizeObserver cannot see, notably an element repositioned
+		 * without any change to its own size (vertically centred hero, max-width container, zoom,
+		 * mobile URL-bar collapse, content reflowing above the element).
+		 */
+		function hasDrifted() {
+			const el = innerRef.current
+			const cached = elemCacheRef.current
+			if (!el || !cached) return true
+			const r = el.getBoundingClientRect()
+			const sx = window.scrollX
+			const sy = window.scrollY
+			return (
+				Math.abs(r.left   + sx - cached.left)   > DRIFT_TOLERANCE ||
+				Math.abs(r.top    + sy - cached.top)    > DRIFT_TOLERANCE ||
+				Math.abs(r.right  + sx - cached.right)  > DRIFT_TOLERANCE ||
+				Math.abs(r.bottom + sy - cached.bottom) > DRIFT_TOLERANCE
+			)
+		}
+
 		function applyProximity(clientX: number, clientY: number) {
 			const el = innerRef.current
 			if (!el) return
 
-			if (cachePositions && !cacheValidRef.current) buildCache()
+			if (cachePositions && (!cacheValidRef.current || hasDrifted())) buildCache()
 
 			// Resolve cursor and element bounds in a common coordinate space.
 			// With cache: page-relative (cursor adjusted by scroll). Without: viewport-relative.
@@ -344,16 +376,27 @@ export const MagnetChar = forwardRef<HTMLElement, MagnetCharProps>(
 			}
 		}, [handleMouseMove, handleScroll, handleTouchMove, handleTouchEnd, handleMouseLeave])
 
-		// ResizeObserver + font-load cache invalidation
+		// ResizeObserver + viewport-resize + font-load cache invalidation.
+		// Not gated on spreadRadius — the element-bounds half of the cache (elemCacheRef) is
+		// used by the whole-element proximityRadius path too, and needs invalidating there.
 		useEffect(() => {
-			if (!cachePositions || !spreadRadius) return
+			if (!cachePositions) return
 			cacheValidRef.current = false
+			const invalidate = () => { cacheValidRef.current = false }
+			// ResizeObserver only fires when the element's own box changes size. A viewport
+			// resize that merely repositions it leaves the cache stale, so listen for resize
+			// directly as well.
+			window.addEventListener('resize', invalidate)
+			window.addEventListener('orientationchange', invalidate)
+			document.fonts?.ready?.then(invalidate)
 			const el = innerRef.current
-			if (!el) return
-			const ro = new ResizeObserver(() => { cacheValidRef.current = false })
-			ro.observe(el)
-			document.fonts?.ready?.then(() => { cacheValidRef.current = false })
-			return () => ro.disconnect()
+			const ro = el ? new ResizeObserver(invalidate) : null
+			if (el && ro) ro.observe(el)
+			return () => {
+				window.removeEventListener('resize', invalidate)
+				window.removeEventListener('orientationchange', invalidate)
+				if (ro) ro.disconnect()
+			}
 		}, [cachePositions, spreadRadius])
 
 		// Invalidate cache when children or spreadRadius change (spans are re-rendered)

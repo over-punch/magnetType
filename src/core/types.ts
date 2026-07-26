@@ -128,8 +128,11 @@ export interface MagnetTypeOptions {
 	/**
 	 * Cache word/character centre positions in page-relative coordinates after setup,
 	 * eliminating getBoundingClientRect calls during the active interaction loop.
-	 * The cache is rebuilt on resize and after fonts load. Disable if the element lives
-	 * inside a custom scroll container (overflow: scroll on a non-window element) —
+	 * The cache is rebuilt when the element resizes, when the viewport resizes, after fonts
+	 * load, and whenever a per-frame check detects the element has moved or changed size
+	 * since the cache was built (one getBoundingClientRect per frame, not one per span).
+	 * Disable if the element lives inside a custom scroll container
+	 * (overflow: scroll on a non-window element) —
 	 * page coordinates are computed using window.scrollX/Y and will be incorrect when
 	 * a nested element is the scroll parent.
 	 * @default true

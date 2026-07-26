@@ -10,8 +10,9 @@ import type { MagnetTypeOptions } from '../core/types'
  * For mode: 'legibility' — starts the cursor-driven wdth boost via applyMagnetType.
  *
  * Both modes return a stop function on mount and restart when options change.
- * When cachePositions is true (the default), a ResizeObserver is attached to rebuild
- * the position cache on resize. Set cachePositions: false to disable it.
+ * When cachePositions is true (the default), the position cache is rebuilt on element
+ * resize, viewport resize, font load, and whenever a per-frame drift check detects the
+ * element has moved. Set cachePositions: false to disable caching entirely.
  *
  * Defaults to 'word' mode if mode is undefined.
  */

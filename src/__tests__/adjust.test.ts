@@ -9,6 +9,26 @@ const CONTAINER_W = 600
 const CHAR_W = 10
 
 /**
+ * Simulated layout shift applied to every mocked rect, in CSS pixels.
+ * Lets a test move the element without changing its size — the exact case a
+ * ResizeObserver cannot detect. Reset to 0,0 in beforeEach.
+ */
+const layoutOffset = { x: 0, y: 0 }
+
+/** Build a mocked DOMRect at the given box, displaced by the current layoutOffset. */
+function rect(left: number, top: number, width: number, height: number): DOMRect {
+	const l = left + layoutOffset.x
+	const t = top + layoutOffset.y
+	return {
+		width, height,
+		left: l, right: l + width,
+		top: t, bottom: t + height,
+		x: l, y: t,
+		toJSON: () => {},
+	} as DOMRect
+}
+
+/**
  * Mocks offsetWidth on HTMLElement.prototype so happy-dom's constructor
  * `this.offsetWidth = 0` doesn't throw — the no-op setter absorbs it.
  * Also mocks getBoundingClientRect.
@@ -32,16 +52,13 @@ function mockMeasurement() {
 	const origBCR = Element.prototype.getBoundingClientRect
 	Element.prototype.getBoundingClientRect = function (this: Element) {
 		const el = this as HTMLElement
+		// The probe is the one rect that must stay at the origin with zero size.
 		if (el.classList?.contains(MAGNET_TYPE_CLASSES.probe)) {
 			return { width: 0, top: 0, left: 0, bottom: 0, right: 0, height: 0, x: 0, y: 0, toJSON: () => {} } as DOMRect
 		}
-		if (el.classList?.contains(MAGNET_TYPE_CLASSES.char)) {
-			return { width: CHAR_W, top: 0, left: 0, bottom: 20, right: CHAR_W, height: 20, x: 0, y: 0, toJSON: () => {} } as DOMRect
-		}
-		if (el.classList?.contains(MAGNET_TYPE_CLASSES.word)) {
-			return { width: CHAR_W * 5, top: 0, left: 0, bottom: 20, right: CHAR_W * 5, height: 20, x: 0, y: 0, toJSON: () => {} } as DOMRect
-		}
-		return { width: CONTAINER_W, top: 0, left: 0, bottom: 20, right: CONTAINER_W, height: 20, x: 0, y: 0, toJSON: () => {} } as DOMRect
+		if (el.classList?.contains(MAGNET_TYPE_CLASSES.char)) return rect(0, 0, CHAR_W, 20)
+		if (el.classList?.contains(MAGNET_TYPE_CLASSES.word)) return rect(0, 0, CHAR_W * 5, 20)
+		return rect(0, 0, CONTAINER_W, 20)
 	}
 
 	return () => {
@@ -65,6 +82,8 @@ describe('magnetType', () => {
 
 	beforeEach(() => {
 		document.body.innerHTML = ''
+		layoutOffset.x = 0
+		layoutOffset.y = 0
 		cleanup = mockMeasurement()
 	})
 
@@ -480,5 +499,106 @@ describe('magnetType', () => {
 
 		stop()
 		rafSpy.mockRestore()
+	})
+
+	// ── position cache invalidation on layout shift ─────────────────────────────
+
+	it('startMagnetType re-tracks the cursor after the element moves without resizing', () => {
+		let pendingRaf: FrameRequestCallback | null = null
+		const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+			pendingRaf = cb; return 0
+		})
+
+		const el = makeElement('Hello')
+		const original = getCleanHTML(el)
+		const stop = startMagnetType(el, original, {
+			mode: 'word',
+			axes: { wght: [300, 700] },
+			radius: 100,
+			cachePositions: true,
+			stabilizeLayout: false,
+		})
+		if (pendingRaf) { pendingRaf(0); pendingRaf = null }
+
+		const span = () => el.querySelector<HTMLElement>(`.${MAGNET_TYPE_CLASSES.word}`)
+
+		// Word centre starts at (25, 10). Cursor dead on it — full peak weight.
+		document.dispatchEvent(new MouseEvent('mousemove', { clientX: 25, clientY: 10, bubbles: true }))
+		if (pendingRaf) { pendingRaf(0); pendingRaf = null }
+		expect(span()?.style.fontVariationSettings).toContain('"wght" 700')
+
+		// Shift the whole element 500px right. Its size is unchanged, so a ResizeObserver
+		// would never fire — only the per-frame drift check can catch this.
+		layoutOffset.x = 500
+
+		// Same cursor coordinates. The word is now 500px away, far outside radius 100,
+		// so it must fall back to rest weight. Stale cache would still report 700.
+		document.dispatchEvent(new MouseEvent('mousemove', { clientX: 25, clientY: 10, bubbles: true }))
+		if (pendingRaf) { pendingRaf(0); pendingRaf = null }
+		expect(span()?.style.fontVariationSettings).toContain('"wght" 300')
+
+		// And the cursor at the word's new centre must reach peak again.
+		document.dispatchEvent(new MouseEvent('mousemove', { clientX: 525, clientY: 10, bubbles: true }))
+		if (pendingRaf) { pendingRaf(0); pendingRaf = null }
+		expect(span()?.style.fontVariationSettings).toContain('"wght" 700')
+
+		stop()
+		rafSpy.mockRestore()
+	})
+
+	it('applyMagnetType re-tracks the cursor after the element moves without resizing', () => {
+		let pendingRaf: FrameRequestCallback | null = null
+		const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+			pendingRaf = cb; return 0
+		})
+
+		const el = makeElement('i')
+		const original = getCleanHTML(el)
+		const stop = applyMagnetType(el, original, {
+			mode: 'legibility',
+			radius: 100,
+			wdthBoost: 9,
+			cachePositions: true,
+		})
+		if (pendingRaf) { pendingRaf(0); pendingRaf = null }
+
+		const span = () => el.querySelector<HTMLElement>(`.${MAGNET_TYPE_CLASSES.char}`)
+
+		// Char centre starts at (5, 10). Cursor dead on it — full boost (risk 3 → 9 + base 100).
+		document.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 10, bubbles: true }))
+		if (pendingRaf) { pendingRaf(0); pendingRaf = null }
+		expect(span()?.style.fontVariationSettings).toContain('"wdth" 109')
+
+		// Move the element without resizing it.
+		layoutOffset.x = 500
+
+		document.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 10, bubbles: true }))
+		if (pendingRaf) { pendingRaf(0); pendingRaf = null }
+		expect(span()?.style.fontVariationSettings).toContain('"wdth" 100')
+
+		stop()
+		rafSpy.mockRestore()
+	})
+
+	it('startMagnetType registers and cleans up viewport resize listeners when caching', () => {
+		const addSpy = vi.spyOn(window, 'addEventListener')
+		const removeSpy = vi.spyOn(window, 'removeEventListener')
+
+		const el = makeElement('Hello world')
+		const original = getCleanHTML(el)
+		const stop = startMagnetType(el, original, { cachePositions: true })
+
+		const added = addSpy.mock.calls.map((c) => c[0])
+		expect(added).toContain('resize')
+		expect(added).toContain('orientationchange')
+
+		stop()
+
+		const removed = removeSpy.mock.calls.map((c) => c[0])
+		expect(removed).toContain('resize')
+		expect(removed).toContain('orientationchange')
+
+		addSpy.mockRestore()
+		removeSpy.mockRestore()
 	})
 })

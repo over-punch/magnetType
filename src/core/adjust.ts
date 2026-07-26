@@ -32,6 +32,48 @@ function collectTextNodes(node: Node, result: Text[] = []): Text[] {
 const axisPatternCache = new Map<string, RegExp>()
 
 /**
+ * Maximum drift, in CSS pixels, tolerated in the target element's page geometry before
+ * the cached span positions are rebuilt. Sub-pixel to absorb fractional rounding noise
+ * from getBoundingClientRect without triggering spurious rebuilds.
+ */
+const DRIFT_TOLERANCE = 0.5
+
+/** Page-relative geometry snapshot of the target element, captured when the cache was built. */
+type AnchorRect = { left: number; top: number; width: number; height: number }
+
+/**
+ * Read the element's geometry in page coordinates (viewport rect plus scroll offset).
+ * Page coordinates are used so the anchor stays comparable across scroll positions.
+ */
+function readAnchor(element: HTMLElement): AnchorRect {
+	const r = element.getBoundingClientRect()
+	return {
+		left: r.left + window.scrollX,
+		top: r.top + window.scrollY,
+		width: r.width,
+		height: r.height,
+	}
+}
+
+/**
+ * True when the element has moved or resized beyond DRIFT_TOLERANCE since the anchor was
+ * captured. Costs a single getBoundingClientRect per frame — regardless of span count — and
+ * catches layout shifts a ResizeObserver cannot see, notably an element repositioned without
+ * any change to its own size (vertically centred hero, max-width container, zoom, mobile
+ * URL-bar collapse, content reflowing above the element).
+ */
+function hasDrifted(element: HTMLElement, anchor: AnchorRect | null): boolean {
+	if (!anchor) return true
+	const now = readAnchor(element)
+	return (
+		Math.abs(now.left - anchor.left) > DRIFT_TOLERANCE ||
+		Math.abs(now.top - anchor.top) > DRIFT_TOLERANCE ||
+		Math.abs(now.width - anchor.width) > DRIFT_TOLERANCE ||
+		Math.abs(now.height - anchor.height) > DRIFT_TOLERANCE
+	)
+}
+
+/**
  * Override a single axis value inside a font-variation-settings string,
  * preserving all other axis values. Adds the axis if it is not already present.
  */
@@ -239,10 +281,14 @@ export function applyMagnetType(
 	type CharPos = { cx: number; cy: number }
 	let charPositions: CharPos[] = []
 	let cacheValid = false
+	/** Element geometry when the cache was last built — drives the per-frame drift check. */
+	let anchor: AnchorRect | null = null
 
 	function buildCharCache() {
 		const sx = window.scrollX
 		const sy = window.scrollY
+		// Read the anchor before the span rects — all reads, no interleaved writes.
+		anchor = readAnchor(element)
 		charPositions = charSpans.map(({ span }) => {
 			const r = span.getBoundingClientRect()
 			return { cx: (r.left + r.right) / 2 + sx, cy: (r.top + r.bottom) / 2 + sy }
@@ -250,12 +296,22 @@ export function applyMagnetType(
 		cacheValid = true
 	}
 
+	/** Mark the position cache stale; it is rebuilt lazily on the next frame. */
+	function invalidateCache(): void {
+		cacheValid = false
+	}
+
 	let ro: ResizeObserver | null = null
 	if (cachePositions) {
 		buildCharCache()
-		ro = new ResizeObserver(() => { cacheValid = false })
+		ro = new ResizeObserver(invalidateCache)
 		ro.observe(element)
-		document.fonts?.ready?.then(() => { cacheValid = false })
+		// ResizeObserver only fires when the element's own box changes size. A viewport
+		// resize that merely repositions it leaves the cache stale, so listen for resize
+		// directly as well.
+		window.addEventListener('resize', invalidateCache)
+		window.addEventListener('orientationchange', invalidateCache)
+		document.fonts?.ready?.then(invalidateCache)
 	}
 
 	// --- rAF loop state ---
@@ -297,7 +353,7 @@ export function applyMagnetType(
 		}
 
 		// Resolve cursor and char centres in a common coordinate space
-		if (cachePositions && !cacheValid) buildCharCache()
+		if (cachePositions && (!cacheValid || hasDrifted(element, anchor))) buildCharCache()
 		const pageCursorX = cachePositions ? cursorX + window.scrollX : cursorX
 		const pageCursorY = cachePositions ? cursorY + window.scrollY : cursorY
 
@@ -362,6 +418,8 @@ export function applyMagnetType(
 		if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null }
 		if (transitionTimer !== null) clearTimeout(transitionTimer)
 		if (ro) ro.disconnect()
+		window.removeEventListener('resize', invalidateCache)
+		window.removeEventListener('orientationchange', invalidateCache)
 		eventTarget.removeEventListener('mousemove', onMouseMove as EventListener)
 		eventTarget.removeEventListener('mouseleave', onMouseLeave as EventListener)
 		eventTarget.removeEventListener('touchmove', onTouchMove as EventListener)
@@ -518,10 +576,14 @@ export function startMagnetType(
 	type WordPos = { cx: number; cy: number }
 	let wordPositions: WordPos[] = []
 	let cacheValid = false
+	/** Element geometry when the cache was last built — drives the per-frame drift check. */
+	let anchor: AnchorRect | null = null
 
 	function buildWordCache() {
 		const sx = window.scrollX
 		const sy = window.scrollY
+		// Read the anchor before the span rects — all reads, no interleaved writes.
+		anchor = readAnchor(element)
 		wordPositions = wordSpans.map((span) => {
 			const r = span.getBoundingClientRect()
 			return { cx: (r.left + r.right) / 2 + sx, cy: (r.top + r.bottom) / 2 + sy }
@@ -529,12 +591,22 @@ export function startMagnetType(
 		cacheValid = true
 	}
 
+	/** Mark the position cache stale; it is rebuilt lazily on the next frame. */
+	function invalidateCache(): void {
+		cacheValid = false
+	}
+
 	let ro: ResizeObserver | null = null
 	if (cachePositions) {
 		buildWordCache()
-		ro = new ResizeObserver(() => { cacheValid = false })
+		ro = new ResizeObserver(invalidateCache)
 		ro.observe(element)
-		document.fonts?.ready?.then(() => { cacheValid = false })
+		// ResizeObserver only fires when the element's own box changes size. A viewport
+		// resize that merely repositions it leaves the cache stale, so listen for resize
+		// directly as well.
+		window.addEventListener('resize', invalidateCache)
+		window.addEventListener('orientationchange', invalidateCache)
+		document.fonts?.ready?.then(invalidateCache)
 	}
 
 	// --- rAF loop state ---
@@ -577,7 +649,7 @@ export function startMagnetType(
 		}
 
 		// Resolve cursor and word centres in a common coordinate space
-		if (cachePositions && !cacheValid) buildWordCache()
+		if (cachePositions && (!cacheValid || hasDrifted(element, anchor))) buildWordCache()
 		const pageCursorX = cachePositions ? cursorX + window.scrollX : cursorX
 		const pageCursorY = cachePositions ? cursorY + window.scrollY : cursorY
 
@@ -654,6 +726,8 @@ export function startMagnetType(
 		if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null }
 		if (transitionTimer !== null) clearTimeout(transitionTimer)
 		if (ro) ro.disconnect()
+		window.removeEventListener('resize', invalidateCache)
+		window.removeEventListener('orientationchange', invalidateCache)
 		eventTarget.removeEventListener('mousemove', onMouseMove as EventListener)
 		eventTarget.removeEventListener('mouseleave', onMouseLeave as EventListener)
 		eventTarget.removeEventListener('touchmove', onTouchMove as EventListener)
