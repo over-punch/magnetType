@@ -1,7 +1,6 @@
 import Demo from "@/components/Demo"
 import CopyInstall from "@/components/CopyInstall"
 import CodeBlock from "@/components/CodeBlock"
-import ToolDirectory from "@/components/ToolDirectory"
 import { version } from "../../../package.json"
 import { version as siteVersion } from "../../package.json"
 import SiteFooter from "../components/SiteFooter"
@@ -114,7 +113,7 @@ const stop = startMagnetType(el, original, { axes: { wght: [300, 600] }, radius:
 								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">radius</td><td className="py-2 pr-6">120</td><td className="py-2">Pixel radius over which the field effect fades. Words beyond this distance receive restValue.</td></tr>
 								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">falloff</td><td className="py-2 pr-6">&apos;quadratic&apos;</td><td className="py-2">&apos;linear&apos; — strength decreases linearly with distance. &apos;quadratic&apos; — decreases as distance², giving a tighter hot zone.</td></tr>
 								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">magnetMode</td><td className="py-2 pr-6">&apos;attract&apos;</td><td className="py-2">&apos;attract&apos; — words near cursor approach peakValue. &apos;repel&apos; — words near cursor stay at restValue; far words approach peakValue.</td></tr>
-								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">scope</td><td className="py-2 pr-6">&apos;document&apos;</td><td className="py-2">&apos;document&apos; — listens for cursor events on the document (all instances share one field). &apos;element&apos; — listens only within the element's own bounds.</td></tr>
+								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">scope</td><td className="py-2 pr-6">&apos;document&apos;</td><td className="py-2">&apos;document&apos; — listens for cursor events on the document (all instances share one field). &apos;element&apos; — listens only within the element&apos;s own bounds.</td></tr>
 								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">cachePositions</td><td className="py-2 pr-6">true</td><td className="py-2">Cache word bounding rects after the first measurement pass. Eliminates repeated getBoundingClientRect calls during the active cursor loop; set to false if the layout shifts at runtime.</td></tr>
 								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">stabilizeLayout</td><td className="py-2 pr-6">true</td><td className="py-2">Apply compensating letter-spacing when axis values change to prevent line-reflow as font weight shifts.</td></tr>
 								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">transitionMs</td><td className="py-2 pr-6">0</td><td className="py-2">CSS transition duration in milliseconds applied when the cursor leaves the field. Adds a smooth ease-out rather than a snap back to restValue.</td></tr>

@@ -2,6 +2,7 @@
 
 // Interactive demo for magnetType — word mode, legibility mode, and character mode
 import { useState, useDeferredValue, useEffect, useCallback, useMemo, useId } from "react"
+import { useMediaQuery, useClientValue } from "@/lib/clientValue"
 import { MagnetTypeText, MagnetChar } from "@liiift-studio/magnettype"
 import type { MagnetTypeModeType, FalloffType, MagnetModeType } from "@liiift-studio/magnettype"
 
@@ -157,14 +158,9 @@ export default function Demo() {
 
 	// Gyro state
 	const [gyroMode, setGyroMode] = useState(false)
-	const [showGyro, setShowGyro] = useState(false)
-
-	// Detect touch/gyro-capable devices after mount
-	useEffect(() => {
-		const hasHoverNone = window.matchMedia('(hover: none)').matches
-		const hasOrientation = typeof DeviceOrientationEvent !== 'undefined'
-		setShowGyro(hasHoverNone && hasOrientation)
-	}, [])
+	const isTouch = useMediaQuery('(hover: none)')
+	const hasOrientation = useClientValue(() => typeof DeviceOrientationEvent !== 'undefined', false)
+	const showGyro = isTouch && hasOrientation
 
 	// Gyro → synthetic mousemove on document
 	useEffect(() => {
@@ -373,7 +369,7 @@ export default function Demo() {
 						))}
 					</div>
 					<p className="text-xs text-muted italic mt-8" style={{ lineHeight: "1.8" }}>
-						spreadRadius controls how far from the cursor each character's weight fades to its minimum. Use proximityRadius to gate the effect to when the cursor is near the element edge, or omit it to always respond. Both props are independent and combinable.
+						spreadRadius controls how far from the cursor each character&apos;s weight fades to its minimum. Use proximityRadius to gate the effect to when the cursor is near the element edge, or omit it to always respond. Both props are independent and combinable.
 					</p>
 				</>
 			)}
