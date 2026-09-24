@@ -1,12 +1,12 @@
 # magnetType
 
-[![npm](https://img.shields.io/npm/v/%40liiift-studio%2Fmagnettype.svg)](https://www.npmjs.com/package/@overpunch/magnettype) [![minzipped size](https://img.shields.io/bundlephobia/minzip/%40liiift-studio%2Fmagnettype)](https://bundlephobia.com/package/@overpunch/magnettype) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![part of liiift type-tools](https://img.shields.io/badge/liiift-type--tools-blueviolet)](https://github.com/Liiift-Studio/type-tools)
+[![npm](https://img.shields.io/npm/v/%40overpunch%2Fmagnettype.svg)](https://www.npmjs.com/package/@overpunch/magnettype) [![minzipped size](https://img.shields.io/bundlephobia/minzip/%40overpunch%2Fmagnettype)](https://bundlephobia.com/package/@overpunch/magnettype) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![part of liiift type-tools](https://img.shields.io/badge/liiift-type--tools-blueviolet)](https://github.com/over-punch/type-tools)
 
 **Type that responds to your cursor.** As the cursor sweeps across the text, each word — or each character — pulls toward a heavier weight, then settles back as it passes. CSS `font-variation-settings` applies a single value to the whole element, with no native way to drive axis values per word from cursor proximity, to selectively widen visually confusable characters for legibility, or to vary weight per-character across a block element. magnetType adds all three.
 
-![magnetType word mode: the words nearest the cursor swell toward a bold weight, fading back to light at the edges](https://raw.githubusercontent.com/Liiift-Studio/magnetType/master/assets/hero.gif?v=1)
+![magnetType word mode: the words nearest the cursor swell toward a bold weight, fading back to light at the edges](https://raw.githubusercontent.com/over-punch/magnetType/master/assets/hero.gif?v=1)
 
-**[Try the live demo at magnettype.com →](https://magnettype.com)** · [npm](https://www.npmjs.com/package/@overpunch/magnettype) · [GitHub](https://github.com/Liiift-Studio/magnetType)
+**[Try the live demo at magnettype.com →](https://magnettype.com)** · [npm](https://www.npmjs.com/package/@overpunch/magnettype) · [GitHub](https://github.com/over-punch/magnetType)
 
 TypeScript · Zero dependencies (~6 kB gzipped) · React + Vanilla JS
 
@@ -64,7 +64,7 @@ export default function Hero() {
 | | Word mode (`MagnetTypeText mode="word"`) | Character mode (`MagnetChar`) |
 |---|---|---|
 | Unit affected | whole words | individual characters |
-| Visual | ![word mode still](https://raw.githubusercontent.com/Liiift-Studio/magnetType/master/assets/word.png?v=1) | ![character mode still](https://raw.githubusercontent.com/Liiift-Studio/magnetType/master/assets/char.png?v=1) |
+| Visual | ![word mode still](https://raw.githubusercontent.com/over-punch/magnetType/master/assets/word.png?v=1) | ![character mode still](https://raw.githubusercontent.com/over-punch/magnetType/master/assets/char.png?v=1) |
 | Driven by | a continuous `requestAnimationFrame` loop | passive, batched per-frame on `mousemove` / `scroll` |
 | Mixed inline content (links, `<code>`) | — | yes |
 

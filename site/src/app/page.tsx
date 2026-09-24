@@ -16,7 +16,7 @@ export default function Home() {
 				eyebrow="cursor-proximity axes"
 				title={[{ text: "Per-word axis" }, { text: "variation.", italic: true, subtle: true }]}
 				install="@overpunch/magnettype"
-				github="https://github.com/Liiift-Studio/magnetType"
+				github="https://github.com/over-punch/magnetType"
 				tech={["TypeScript", "Zero dependencies", "React + Vanilla JS"]}
 			>
 				<p className="text-base leading-relaxed max-w-lg">
@@ -122,7 +122,7 @@ const stop = startMagnetType(el, original, { axes: { wght: [300, 600] }, radius:
 				bundle="magnettype"
 				attr="data-magnettype"
 				framerComponent="MagnetType"
-				repo="Liiift-Studio/MagnetType"
+				repo="over-punch/MagnetType"
 			/>
 
 			<SiteFooter current="magnetType" npmVersion={version} siteVersion={siteVersion} />

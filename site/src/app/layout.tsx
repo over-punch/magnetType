@@ -38,7 +38,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
 	return (
 		<html lang="en" className={`h-full antialiased ${inter.variable}`}>
 			<body className="min-h-full flex flex-col">
-				<SiteHeader current="magnetType" githubUrl="https://github.com/Liiift-Studio/magnetType" />{children}</body>
+				<SiteHeader current="magnetType" githubUrl="https://github.com/over-punch/magnetType" />{children}</body>
 		</html>
 	)
 }
