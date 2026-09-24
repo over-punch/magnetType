@@ -5,7 +5,7 @@ import { version } from "../../../package.json"
 import { version as siteVersion } from "../../package.json"
 import SiteFooter from "../components/SiteFooter"
 import PortsSection from "../components/PortsSection"
-import { MagnetChar } from "@liiift-studio/magnettype"
+import { MagnetChar } from "@overpunch/magnettype"
 
 export default function Home() {
 	return (
@@ -15,7 +15,7 @@ export default function Home() {
 			<Hero
 				eyebrow="cursor-proximity axes"
 				title={[{ text: "Per-word axis" }, { text: "variation.", italic: true, subtle: true }]}
-				install="@liiift-studio/magnettype"
+				install="@overpunch/magnettype"
 				github="https://github.com/Liiift-Studio/magnetType"
 				tech={["TypeScript", "Zero dependencies", "React + Vanilla JS"]}
 			>
@@ -64,7 +64,7 @@ export default function Home() {
 				<div className="flex flex-col gap-8 text-sm">
 					<div className="flex flex-col gap-3">
 						<p className="text-muted">Drop-in component</p>
-						<CodeBlock code={`import { MagnetTypeText } from '@liiift-studio/magnettype'
+						<CodeBlock code={`import { MagnetTypeText } from '@overpunch/magnettype'
 
 <MagnetTypeText mode="word" axes={{ wght: [300, 600] }} radius={120}>
   Your paragraph text here...
@@ -72,14 +72,14 @@ export default function Home() {
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="text-muted">Hook — attach to any element</p>
-						<CodeBlock code={`import { useMagnetType } from '@liiift-studio/magnettype'
+						<CodeBlock code={`import { useMagnetType } from '@overpunch/magnettype'
 
 const ref = useMagnetType({ mode: 'word', axes: { wght: [300, 600] }, radius: 120 })
 <p ref={ref}>{children}</p>`} />
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="text-muted">Per-character component</p>
-						<CodeBlock code={`import { MagnetChar } from '@liiift-studio/magnettype'
+						<CodeBlock code={`import { MagnetChar } from '@overpunch/magnettype'
 
 <MagnetChar minWeight={300} maxWeight={900} spreadRadius={80}>
   Your paragraph text here...
@@ -87,7 +87,7 @@ const ref = useMagnetType({ mode: 'word', axes: { wght: [300, 600] }, radius: 12
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="text-muted">Vanilla JS</p>
-						<CodeBlock code={`import { startMagnetType, getCleanHTML } from '@liiift-studio/magnettype'
+						<CodeBlock code={`import { startMagnetType, getCleanHTML } from '@overpunch/magnettype'
 
 const el = document.querySelector('p')
 const original = getCleanHTML(el) // capture original HTML before injection
@@ -118,7 +118,7 @@ const stop = startMagnetType(el, original, { axes: { wght: [300, 600] }, radius:
 			</section>
 
 			<PortsSection
-				npm="@liiift-studio/magnettype"
+				npm="@overpunch/magnettype"
 				bundle="magnettype"
 				attr="data-magnettype"
 				framerComponent="MagnetType"

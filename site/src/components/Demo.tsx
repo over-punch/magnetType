@@ -3,8 +3,8 @@
 // Interactive demo for magnetType — word mode, legibility mode, and character mode
 import { useState, useDeferredValue, useEffect, useCallback, useMemo, useId } from "react"
 import { useMediaQuery, useClientValue } from "@/lib/clientValue"
-import { MagnetTypeText, MagnetChar } from "@liiift-studio/magnettype"
-import type { MagnetTypeModeType, FalloffType, MagnetModeType } from "@liiift-studio/magnettype"
+import { MagnetTypeText, MagnetChar } from "@overpunch/magnettype"
+import type { MagnetTypeModeType, FalloffType, MagnetModeType } from "@overpunch/magnettype"
 
 /** Prose paragraphs for word mode demo */
 const FIELD_PARAGRAPHS = [

@@ -1,5 +1,5 @@
 {
-	"name": "@liiift-studio/magnettype",
+	"name": "@overpunch/magnettype",
 	"version": "1.2.7",
 	"description": "Cursor-field per-word variable font axis variation and per-character legibility mode",
 	"type": "module",

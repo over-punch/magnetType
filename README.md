@@ -1,12 +1,12 @@
 # magnetType
 
-[![npm](https://img.shields.io/npm/v/%40liiift-studio%2Fmagnettype.svg)](https://www.npmjs.com/package/@liiift-studio/magnettype) [![minzipped size](https://img.shields.io/bundlephobia/minzip/%40liiift-studio%2Fmagnettype)](https://bundlephobia.com/package/@liiift-studio/magnettype) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![part of liiift type-tools](https://img.shields.io/badge/liiift-type--tools-blueviolet)](https://github.com/Liiift-Studio/type-tools)
+[![npm](https://img.shields.io/npm/v/%40liiift-studio%2Fmagnettype.svg)](https://www.npmjs.com/package/@overpunch/magnettype) [![minzipped size](https://img.shields.io/bundlephobia/minzip/%40liiift-studio%2Fmagnettype)](https://bundlephobia.com/package/@overpunch/magnettype) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![part of liiift type-tools](https://img.shields.io/badge/liiift-type--tools-blueviolet)](https://github.com/Liiift-Studio/type-tools)
 
 **Type that responds to your cursor.** As the cursor sweeps across the text, each word — or each character — pulls toward a heavier weight, then settles back as it passes. CSS `font-variation-settings` applies a single value to the whole element, with no native way to drive axis values per word from cursor proximity, to selectively widen visually confusable characters for legibility, or to vary weight per-character across a block element. magnetType adds all three.
 
 ![magnetType word mode: the words nearest the cursor swell toward a bold weight, fading back to light at the edges](https://raw.githubusercontent.com/Liiift-Studio/magnetType/master/assets/hero.gif?v=1)
 
-**[Try the live demo at magnettype.com →](https://magnettype.com)** · [npm](https://www.npmjs.com/package/@liiift-studio/magnettype) · [GitHub](https://github.com/Liiift-Studio/magnetType)
+**[Try the live demo at magnettype.com →](https://magnettype.com)** · [npm](https://www.npmjs.com/package/@overpunch/magnettype) · [GitHub](https://github.com/Liiift-Studio/magnetType)
 
 TypeScript · Zero dependencies (~6 kB gzipped) · React + Vanilla JS
 
@@ -15,7 +15,7 @@ TypeScript · Zero dependencies (~6 kB gzipped) · React + Vanilla JS
 ## Install
 
 ```bash
-npm install @liiift-studio/magnettype
+npm install @overpunch/magnettype
 ```
 
 > **Variable font required:** magnetType sets `font-variation-settings` per word or per character. The target font must support the axes you specify (e.g. a font with a `wght` axis for weight-based effects, or a `wdth` axis for legibility mode). The effect is invisible with non-variable fonts.
@@ -31,7 +31,7 @@ npm install @liiift-studio/magnettype
 The examples below assume a loaded variable font with a `wght` axis. Here is a full setup — load the font, point `font-family` at it, then wrap your text:
 
 ```tsx
-import { MagnetTypeText } from '@liiift-studio/magnettype'
+import { MagnetTypeText } from '@overpunch/magnettype'
 
 // 1. Load a variable font (any font with a `wght` axis works — Inter, Recursive,
 //    Roboto Flex, Source Serif…). Put this in your global CSS:
@@ -77,7 +77,7 @@ export default function Hero() {
 Per-word cursor-proximity weight variation driven by a continuous rAF loop.
 
 ```tsx
-import { MagnetTypeText } from '@liiift-studio/magnettype'
+import { MagnetTypeText } from '@overpunch/magnettype'
 
 <MagnetTypeText
   mode="word"
@@ -95,7 +95,7 @@ import { MagnetTypeText } from '@liiift-studio/magnettype'
 Per-character cursor-proximity weight variation. Works with mixed content (inline elements, links, `<code>`, etc.) inside any block element. Characters are wrapped as React elements — no DOM mutation.
 
 ```tsx
-import { MagnetChar } from '@liiift-studio/magnettype'
+import { MagnetChar } from '@overpunch/magnettype'
 
 // Per-character spread — each character responds to cursor distance
 <MagnetChar
@@ -145,7 +145,7 @@ import { MagnetChar } from '@liiift-studio/magnettype'
 ### React hook — field mode
 
 ```tsx
-import { useMagnetType } from '@liiift-studio/magnettype'
+import { useMagnetType } from '@overpunch/magnettype'
 
 const ref = useMagnetType({ mode: 'word', axes: { wght: [300, 700] }, radius: 150 })
 return <p ref={ref}>{children}</p>
@@ -156,7 +156,7 @@ The hook starts the cursor-proximity rAF loop on mount and tears it down cleanly
 ### React — legibility mode
 
 ```tsx
-import { MagnetTypeText } from '@liiift-studio/magnettype'
+import { MagnetTypeText } from '@overpunch/magnettype'
 
 <MagnetTypeText mode="legibility" wdthBoost={8}>
   Visually confusable characters like il1I and 0O are subtly widened.
@@ -166,7 +166,7 @@ import { MagnetTypeText } from '@liiift-studio/magnettype'
 ### Vanilla JS — field mode
 
 ```ts
-import { startMagnetType, removeMagnetType, getCleanHTML } from '@liiift-studio/magnettype'
+import { startMagnetType, removeMagnetType, getCleanHTML } from '@overpunch/magnettype'
 
 const el = document.querySelector('p')
 const original = getCleanHTML(el)
@@ -189,7 +189,7 @@ document.fonts.ready.then(run)
 ### Vanilla JS — legibility mode
 
 ```ts
-import { applyMagnetType, removeMagnetType, getCleanHTML } from '@liiift-studio/magnettype'
+import { applyMagnetType, removeMagnetType, getCleanHTML } from '@overpunch/magnettype'
 
 const el = document.querySelector('p')
 const original = getCleanHTML(el)
@@ -211,7 +211,7 @@ document.fonts.ready.then(() => {
 ### TypeScript
 
 ```ts
-import type { MagnetTypeOptions, FalloffType, MagnetModeType, MagnetCharProps } from '@liiift-studio/magnettype'
+import type { MagnetTypeOptions, FalloffType, MagnetModeType, MagnetCharProps } from '@overpunch/magnettype'
 
 const fieldOpts: MagnetTypeOptions = {
   mode: 'word',
