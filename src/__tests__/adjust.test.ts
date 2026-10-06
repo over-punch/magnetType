@@ -153,14 +153,14 @@ describe('magnetType', () => {
 		stop()
 	})
 
-	it('applyMagnetType char spans start at base wdth before cursor interaction', () => {
-		// Before any cursor movement, all spans should be at base wdth (100)
+	it('applyMagnetType char spans carry no styles of their own before cursor interaction', () => {
+		// At rest the characters have no inline axes, so they shape (kern, join) with their neighbours
 		const el = makeElement('il1I')
 		const original = getCleanHTML(el)
 		const stop = applyMagnetType(el, original, { mode: 'legibility', wdthBoost: 6 })
 		const charSpans = el.querySelectorAll<HTMLElement>(`.${MAGNET_TYPE_CLASSES.char}`)
 		charSpans.forEach((span) => {
-			expect(span.style.fontVariationSettings).toContain('"wdth" 100')
+			expect(span.style.fontVariationSettings).toBe('')
 		})
 		stop()
 	})
@@ -574,7 +574,8 @@ describe('magnetType', () => {
 
 		document.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 10, bubbles: true }))
 		if (pendingRaf) { pendingRaf(0); pendingRaf = null }
-		expect(span()?.style.fontVariationSettings).toContain('"wdth" 100')
+		// Back at rest: no inline axes
+		expect(span()?.style.fontVariationSettings).toBe('')
 
 		stop()
 		rafSpy.mockRestore()
@@ -600,5 +601,114 @@ describe('magnetType', () => {
 
 		addSpy.mockRestore()
 		removeSpy.mockRestore()
+	})
+})
+
+// ─── Review fixes (2026-10) ──────────────────────────────────────────────────
+
+describe('review fixes', () => {
+	let cleanup: (() => void) | null = null
+	beforeEach(() => { document.body.innerHTML = ''; layoutOffset.x = 0; layoutOffset.y = 0; cleanup = mockMeasurement() })
+	afterEach(() => { cleanup?.(); cleanup = null; vi.restoreAllMocks() })
+
+	it('keeps the text readable (no aria-hidden spans, no aria-label) in both modes', () => {
+		for (const run of [startMagnetType, applyMagnetType]) {
+			const el = makeElement('Before <a href="#">a link</a> illicit text.')
+			const stop = run(el, getCleanHTML(el), {})
+			expect(el.querySelectorAll('[aria-hidden]').length).toBe(0)
+			expect(el.hasAttribute('aria-label')).toBe(false)
+			expect(el.textContent).toBe('Before a link illicit text.')
+			stop()
+		}
+	})
+
+	it('keeps elements, listeners and form values through start and stop', () => {
+		const el = makeElement('Name <input id="f"> and <button id="b">Save it</button> here')
+		const input = el.querySelector('input')!
+		input.value = 'typed'
+		let clicks = 0
+		el.querySelector('button')!.addEventListener('click', () => clicks++)
+		const original = getCleanHTML(el)
+		const stop = startMagnetType(el, original, {})
+		el.querySelector('button')!.click()
+		stop()
+		el.querySelector('button')!.click()
+		expect(clicks).toBe(2)
+		expect(el.querySelector('input')).toBe(input)
+		expect(input.value).toBe('typed')
+		expect(el.innerHTML).toBe(original)
+	})
+
+	it('leaves styles, text areas and SVG text alone', () => {
+		const html = 'Text <style>.zz{color:red}</style><textarea>typed</textarea><svg><text>svg</text></svg> end'
+		const el = makeElement(html)
+		const stop = applyMagnetType(el, html, {})
+		expect(el.querySelector('style')!.textContent).toBe('.zz{color:red}')
+		expect(el.querySelector('textarea')!.children.length).toBe(0)
+		expect(el.querySelector('svg')!.querySelectorAll('span').length).toBe(0)
+		stop()
+	})
+
+	it('restarting with the wrapped markup does not nest spans', () => {
+		const el = makeElement('abc def')
+		startMagnetType(el, el.innerHTML, {})
+		const stop = startMagnetType(el, el.innerHTML, {})
+		expect(el.querySelectorAll(`.${MAGNET_TYPE_CLASSES.word} .${MAGNET_TYPE_CLASSES.word}`).length).toBe(0)
+		stop()
+		expect(el.innerHTML).toBe('abc def')
+	})
+
+	it('rejects bad axis tags and radii with a warning', () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+		const el = makeElement('Hello world')
+		const stop = startMagnetType(el, el.innerHTML, { axes: { '(': [1, 2], 'wght" 900, "wdth': [1, 2] } as never, radius: -100 })
+		const fvs = el.querySelector<HTMLElement>(`.${MAGNET_TYPE_CLASSES.word}`)!.style.fontVariationSettings
+		expect(fvs).toBe('"wght" 300')
+		expect(warn).toHaveBeenCalled()
+		stop()
+	})
+
+	it('legibility characters at rest carry no styles, so they shape with their neighbours', () => {
+		const el = makeElement('illicit')
+		const stop = applyMagnetType(el, el.innerHTML, {})
+		el.querySelectorAll<HTMLElement>(`.${MAGNET_TYPE_CLASSES.char}`).forEach((s) => expect(s.getAttribute('style') ?? '').toBe(''))
+		stop()
+	})
+
+	it('wraps decomposed accents with their letter', () => {
+		const el = makeElement('café ï')
+		const stop = applyMagnetType(el, el.innerHTML, {})
+		const texts = Array.from(el.querySelectorAll(`.${MAGNET_TYPE_CLASSES.char}`), (s) => s.textContent)
+		expect(texts).toContain('é')
+		expect(texts).toContain('ï')
+		stop()
+	})
+
+	it('ignores the mouse events a browser sends after a tap', () => {
+		let pendingRaf: FrameRequestCallback | null = null
+		vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => { pendingRaf = cb; return 1 })
+		const el = makeElement('word')
+		const stop = startMagnetType(el, el.innerHTML, { radius: 200 })
+		const flush = () => { const cb = pendingRaf; pendingRaf = null; cb?.(0) }
+		flush()
+		document.dispatchEvent(new Event('touchend'))
+		flush()
+		document.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 10 }))
+		flush()
+		expect(el.querySelector<HTMLElement>(`.${MAGNET_TYPE_CLASSES.word}`)!.style.fontVariationSettings).toBe('"wght" 300')
+		stop()
+	})
+
+	it('an element removed without stop() stops on the next cursor move', () => {
+		let pendingRaf: FrameRequestCallback | null = null
+		vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => { pendingRaf = cb; return 1 })
+		const remove = vi.spyOn(document, 'removeEventListener')
+		const el = makeElement('word')
+		startMagnetType(el, el.innerHTML, {})
+		el.remove()
+		document.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 10 }))
+		const cb = pendingRaf as FrameRequestCallback | null
+		cb?.(0)
+		expect(remove.mock.calls.some(([type]) => type === 'mousemove')).toBe(true)
 	})
 })
