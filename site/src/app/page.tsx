@@ -46,7 +46,7 @@ export default function Home() {
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="font-semibold text-foreground text-base">Field mode vs legibility mode</p>
-						<p>Field mode runs a requestAnimationFrame loop driven by cursor position. Legibility mode wraps visually confusable characters (il1I, rn, 0O) and widens them on the wdth axis as the cursor comes near; at rest they are left exactly as the font draws them. It needs a font with a wdth axis.</p>
+						<p>Field mode runs a requestAnimationFrame loop driven by cursor position. Legibility mode tells visually confusable characters apart as the cursor comes near: I widens, l and 1 get heavier, 0 narrows while O widens, and an r before n or m gets a small gap. Their width changes are cancelled, so lines don't move; at rest they are left exactly as the font draws them. The shape changes need wdth and wght axes; the r–n gap works in any font.</p>
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="font-semibold text-foreground text-base">Performance via rAF batching</p>
@@ -100,7 +100,7 @@ const stop = startMagnetType(el, original, { axes: { wght: [300, 600] }, radius:
 							<caption className="sr-only">MagnetType options reference</caption>
 							<thead><tr className="text-subtle text-left"><th className="pb-2 pr-6 font-normal">Option</th><th className="pb-2 pr-6 font-normal">Default</th><th className="pb-2 font-normal">Description</th></tr></thead>
 							<tbody className="text-muted zebra">
-								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">mode</td><td className="py-2 pr-6">&apos;word&apos;</td><td className="py-2">&apos;word&apos; — cursor proximity drives per-word font-variation-settings. &apos;legibility&apos; — cursor-proximity-driven wdth boost for confusable characters (touch: while a finger drags over the text).</td></tr>
+								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">mode</td><td className="py-2 pr-6">&apos;word&apos;</td><td className="py-2">&apos;word&apos; — cursor proximity drives per-word font-variation-settings. &apos;legibility&apos; — near the cursor, confusable characters are told apart (touch: while a finger drags over the text).</td></tr>
 								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">axes</td><td className="py-2 pr-6">&#123; wght: [300, 500] &#125;</td><td className="py-2">Map of axis tag → [restValue, peakValue]. restValue applies at full distance; peakValue when cursor is directly over the word.</td></tr>
 								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">radius</td><td className="py-2 pr-6">120</td><td className="py-2">Pixel radius over which the field effect fades. Words beyond this distance receive restValue.</td></tr>
 								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">falloff</td><td className="py-2 pr-6">&apos;quadratic&apos;</td><td className="py-2">&apos;linear&apos; — strength decreases linearly with distance. &apos;quadratic&apos; — decreases as distance², giving a tighter hot zone.</td></tr>
@@ -110,7 +110,9 @@ const stop = startMagnetType(el, original, { axes: { wght: [300, 600] }, radius:
 								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">stabilizeLayout</td><td className="py-2 pr-6">true</td><td className="py-2">Apply compensating letter-spacing when axis values change to prevent line-reflow as font weight shifts.</td></tr>
 								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">transitionMs</td><td className="py-2 pr-6">0</td><td className="py-2">CSS transition duration in milliseconds applied when the cursor leaves the field. Adds a smooth ease-out rather than a snap back to restValue.</td></tr>
 								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">props</td><td className="py-2 pr-6">—</td><td className="py-2">Additional proximity-driven effects via MagnetTypeProps. Accepts <code>opacity: [rest, peak]</code> to fade words by distance, and <code>italic: true</code> to italicise words as they enter the field.</td></tr>
-								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">wdthBoost</td><td className="py-2 pr-6">6</td><td className="py-2">wdth axis units added to confusable characters in legibility mode. Risk-proportional — highest-risk characters receive the full boost.</td></tr>
+								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">wdthBoost</td><td className="py-2 pr-6">30</td><td className="py-2">Legibility mode: wdth units for I and O (wider), 0 (narrower) and 1 (half).</td></tr>
+								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">wghtBoost</td><td className="py-2 pr-6">200</td><td className="py-2">Legibility mode: wght units for l and 1 (heavier) and i (half).</td></tr>
+								<tr className="hover:bg-foreground/5 transition-colors"><td className="py-2 pr-6 font-mono">trackBoost</td><td className="py-2 pr-6">0.08</td><td className="py-2">Legibility mode: em of space after an r before n or m, taken back after it.</td></tr>
 							</tbody>
 						</table>
 					</div>

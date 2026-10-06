@@ -247,7 +247,7 @@ export default function Demo() {
 					titles={{
 						char: "Per-character mode: each individual letter's weight tracks proximity to the cursor",
 						word: "Per-word mode: each word's weight shifts as the cursor enters its magnetic radius",
-						legibility: "Legibility mode: expands the width axis on visually confusable characters (il1I, rn, 0O) near the cursor",
+						legibility: "Legibility mode: tells confusable characters (I l 1, 0 O, rn) apart near the cursor",
 					}}
 				/>
 			</div>
@@ -329,11 +329,10 @@ export default function Demo() {
 			{mode === 'legibility' && (
 				<>
 					<p className="text-xs text-muted mb-8">
-						Legibility mode boosts the wdth axis on visually confusable characters (il1I, rn, 0O) in proportion to their confusion risk. Move your cursor over the text — characters near the cursor receive the full boost, fading out by distance. On touch devices the boost is always active.
+						Legibility mode tells confusable characters apart: I widens, l and 1 get heavier, 0 narrows while O widens, and an r before n or m gets a small gap. Move your cursor over the text — characters near it change most, fading out by distance, and lines don't move. On touch screens it follows your finger while it drags over the text.
 					</p>
 					<MagnetTypeText
 						mode="legibility"
-						wdthBoost={8}
 						style={sampleStyle}
 					>
 						{LEGIBILITY_TEXT}

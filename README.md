@@ -2,7 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/%40overpunch%2Fmagnettype.svg)](https://www.npmjs.com/package/@overpunch/magnettype) [![minzipped size](https://img.shields.io/bundlephobia/minzip/%40overpunch%2Fmagnettype)](https://bundlephobia.com/package/@overpunch/magnettype) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![part of liiift type-tools](https://img.shields.io/badge/liiift-type--tools-blueviolet)](https://github.com/over-punch/type-tools)
 
-**Type that responds to your cursor.** As the cursor sweeps across the text, each word — or each character — pulls toward a heavier weight, then settles back as it passes. CSS `font-variation-settings` applies a single value to the whole element, with no native way to drive axis values per word from cursor proximity, to selectively widen visually confusable characters for legibility, or to vary weight per-character across a block element. magnetType adds all three.
+**Type that responds to your cursor.** As the cursor sweeps across the text, each word — or each character — pulls toward a heavier weight, then settles back as it passes. CSS `font-variation-settings` applies a single value to the whole element, with no native way to drive axis values per word from cursor proximity, to tell visually confusable characters apart for legibility, or to vary weight per-character across a block element. magnetType adds all three.
 
 ![magnetType word mode: the words nearest the cursor swell toward a bold weight, fading back to light at the edges](https://raw.githubusercontent.com/over-punch/magnetType/master/assets/hero.gif?v=1)
 
@@ -18,11 +18,11 @@ TypeScript · Zero dependencies (~5 kB gzipped) · React + Vanilla JS
 npm install @overpunch/magnettype
 ```
 
-> **Variable font required:** magnetType sets `font-variation-settings` per word or per character. The target font must support the axes you specify (e.g. a font with a `wght` axis for weight-based effects, or a `wdth` axis for legibility mode). The effect is invisible with non-variable fonts.
+> **Variable font required:** magnetType sets `font-variation-settings` per word or per character. The target font must support the axes you specify (e.g. a font with a `wght` axis for weight-based effects, or `wdth`/`wght` axes for legibility mode, whose r–n spacing works in any font). The effect is invisible with non-variable fonts.
 
 **Axis jargon, decoded:** variable fonts expose adjustable *axes*, each a four-letter tag. `wght` is **weight** (boldness), `wdth` is **width**, `opsz` is **optical size**. An axis range like `[300, 700]` means "interpolate from 300 (light) up to 700 (bold)" as the cursor approaches. magnetType drives these axes live; CSS can only set them once.
 
-**Compatibility:** ~5 kB gzipped, zero runtime dependencies. React 17+ is an optional peer dependency — the main entry also exports the hook and components, so it imports `react`; without React, import the vanilla API from `@overpunch/magnettype/core`. Requires a browser that supports variable fonts and `font-variation-settings` (all evergreen browsers; Chrome/Edge 62+, Firefox 62+, Safari 11+). On touch devices with no cursor, field and character modes have no pointer to track; legibility mode applies its boost statically.
+**Compatibility:** ~5 kB gzipped, zero runtime dependencies. React 17+ is an optional peer dependency — the main entry also exports the hook and components, so it imports `react`; without React, import the vanilla API from `@overpunch/magnettype/core`. Requires a browser that supports variable fonts and `font-variation-settings` (all evergreen browsers; Chrome/Edge 62+, Firefox 62+, Safari 11+). On touch screens, all three modes follow a finger while it drags over the text; word and legibility modes return to rest when it lifts.
 
 ---
 
@@ -158,8 +158,8 @@ The hook starts the cursor-proximity rAF loop on mount and tears it down cleanly
 ```tsx
 import { MagnetTypeText } from '@overpunch/magnettype'
 
-<MagnetTypeText mode="legibility" wdthBoost={8}>
-  Visually confusable characters like il1I and 0O are subtly widened.
+<MagnetTypeText mode="legibility">
+  Near the cursor, I widens, l and 1 get heavier, 0 narrows and O widens, and rn gets a gap.
 </MagnetTypeText>
 ```
 
@@ -193,7 +193,7 @@ import { applyMagnetType, removeMagnetType, getCleanHTML } from '@overpunch/magn
 
 const el = document.querySelector('p')
 const original = getCleanHTML(el)
-const opts = { mode: 'legibility', wdthBoost: 8 }
+const opts = { mode: 'legibility', wdthBoost: 30, wghtBoost: 200 }
 
 // applyMagnetType returns a stop function and manages its own ResizeObserver internally —
 // no need to wrap it in an external ResizeObserver.
@@ -223,7 +223,7 @@ const fieldOpts: MagnetTypeOptions = {
 
 const legibilityOpts: MagnetTypeOptions = {
   mode: 'legibility',
-  wdthBoost: 6,
+  wdthBoost: 30,
 }
 ```
 
@@ -233,14 +233,16 @@ const legibilityOpts: MagnetTypeOptions = {
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `mode` | `'word'` | `'word'` (alias: `'field'`) — cursor proximity drives per-word `font-variation-settings` via a continuous rAF loop. `'legibility'` — cursor-driven per-character `wdth` boost on visually confusable characters |
+| `mode` | `'word'` | `'word'` (alias: `'field'`) — cursor proximity drives per-word `font-variation-settings` via a continuous rAF loop. `'legibility'` — near the cursor, visually confusable characters are told apart (see [Legibility mode](#legibility-mode)) |
 | `axes` | `{ wght: [300, 500] }` | *(field mode)* Map of axis tag → `[restValue, peakValue]` |
 | `radius` | `120` | Pixel radius over which the field effect fades from each word's centre (field mode) or each character's centre (legibility mode) |
 | `falloff` | `'quadratic'` | `'linear'` or `'quadratic'` falloff curve |
 | `magnetMode` | `'attract'` | *(field mode)* `'attract'` — near words approach `peakValue`. `'repel'` — near words stay at `restValue`, far words approach `peakValue` |
 | `scope` | `'document'` | `'document'` — cursor events listened on the document, enabling cross-element effects. `'element'` — events restricted to the target element |
 | `props` | `undefined` | Additional CSS effects driven by cursor proximity. `{ opacity: [rest, peak] }` fades words/chars; `{ italic: true }` toggles italic at strength > 0.5 |
-| `wdthBoost` | `6` | *(legibility mode)* `wdth` units added to confusable characters, scaled by risk: `il1I` (risk 3) get the full boost; `r 0 O` (risk 2) get ⅔; `n m o b d p q c e` (risk 1) get ⅓. The default is subtle — see [Legibility mode](#legibility-mode) |
+| `wdthBoost` | `30` | *(legibility mode)* `wdth` units at full strength: `I` and `O` widen, `0` narrows, `1` widens by half. Needs a `wdth` axis |
+| `wghtBoost` | `200` | *(legibility mode)* `wght` units at full strength: `l` and `1` get heavier, `i` by half. Needs a variable weight |
+| `trackBoost` | `0.08` | *(legibility mode)* em of space added after an `r` that's followed by `n` or `m` (taken back after the `n`/`m`, so the line keeps its length). Works in any font |
 | `stabilizeLayout` | `true` | *(word mode)* Cancel each word's width change with letter-spacing, so lines don't reflow as the axes change (your own letter-spacing is kept). Disable for natural bold spacing |
 | `cachePositions` | `true` | Cache word/character centre positions to avoid `getBoundingClientRect` on every `mousemove`. Rebuilt when the element moves or resizes (including inside scrolled or transformed containers), on viewport resize and after fonts load |
 | `transitionMs` | `0` | Duration in ms for CSS transition back to rest when cursor leaves. `0` = instant snap. Cleared on the next `mousemove` so live tracking is not delayed |
@@ -269,9 +271,21 @@ Each word's `font-variation-settings` interpolates between `restValue` and `peak
 
 ### Legibility mode
 
-magnetType scans text nodes recursively and checks each character (grapheme, so accents stay with their letter) against a built-in confusable character table. Confusable characters are wrapped in `mt-char` spans; near the cursor they get a `wdth` boost proportional to risk level, around the text's own width. At rest they carry no styles of their own, so kerning and ligatures are unchanged. Non-confusable characters pass through as plain text nodes.
+magnetType scans text nodes recursively and checks each character (grapheme, so accents stay with their letter, looked up by its base letter). Characters that are easy to confuse get different treatments near the cursor, so members of the same group stop looking alike:
 
-The effect needs a font with a `wdth` axis (Roboto Flex, for example); Inter and Source Serif have none, so nothing changes. It is subtle at the default boost: in Roboto Flex at 20px, `l` widens by about 0.03px at full strength, and `I` and `l` get the same boost. Try `wdthBoost` 30 or more to see it.
+| Character | Near the cursor |
+|---|---|
+| `I` | wider (`wdthBoost`) |
+| `l` | heavier (`wghtBoost`) |
+| `1` | heavier and a little wider |
+| `i` | a little heavier |
+| `0` | narrower |
+| `O` | wider |
+| `r` before `n`/`m` | a gap after it (`trackBoost`), so "rn" can't read as "m" |
+
+The table is exported as `LEGIBILITY_TREATMENTS`. Each changed character's width change is cancelled with letter-spacing (see [Layout stability](#layout-stability)), so the shapes change but lines don't move. At rest the characters carry no styles of their own, so kerning and ligatures are unchanged; other characters pass through as plain text.
+
+Measured in Roboto Flex at 40px, at the defaults: `I` and `l` are identical at rest (3px of ink) and differ at peak (`I` 4px wide, `l` 6px and twice the ink); `0` goes from 17 to 14px wide while `O` goes from 22 to 24px; the `n` in "turn" moves 3px away from the `r`. The `wdth` and `wght` changes need those axes (Inter has `wght` only, so there `I` and `0`/`O` don't change); the r–n gap works in any font.
 
 ### Markup and accessibility
 
@@ -279,7 +293,7 @@ Words and characters are wrapped in place: the original elements, their listener
 
 ### Layout stability
 
-Changing `wght` does change advance widths: from 300 to 800, a line of Roboto Flex grew 13% and Inter 9% in our measurements. With `stabilizeLayout` (the default), word mode measures each word at nine points from rest to peak and cancels its width change with letter-spacing; across 54 cursor positions over a Roboto Flex paragraph no line break changed. Legibility mode is not stabilized; large `wdthBoost` values can move line breaks.
+Changing `wght` does change advance widths: from 300 to 800, a line of Roboto Flex grew 13% and Inter 9% in our measurements. With `stabilizeLayout` (the default), word mode measures each word at nine points from rest to peak and cancels its width change with letter-spacing; across 54 cursor positions over a Roboto Flex paragraph no line break changed. Legibility mode is stabilized the same way: each changed character's width change is cancelled, and the r–n gap is taken back after the `n`/`m`. Over a Roboto Flex paragraph under the cursor, no line break changed.
 
 ### `prefers-reduced-motion`
 
