@@ -8,7 +8,7 @@
 
 **[Try the live demo at magnettype.com →](https://magnettype.com)** · [npm](https://www.npmjs.com/package/@overpunch/magnettype) · [GitHub](https://github.com/over-punch/magnetType)
 
-TypeScript · Zero dependencies (~6 kB gzipped) · React + Vanilla JS
+TypeScript · Zero dependencies (~5 kB gzipped) · React + Vanilla JS
 
 ---
 
@@ -22,7 +22,7 @@ npm install @overpunch/magnettype
 
 **Axis jargon, decoded:** variable fonts expose adjustable *axes*, each a four-letter tag. `wght` is **weight** (boldness), `wdth` is **width**, `opsz` is **optical size**. An axis range like `[300, 700]` means "interpolate from 300 (light) up to 700 (bold)" as the cursor approaches. magnetType drives these axes live; CSS can only set them once.
 
-**Compatibility:** ~6 kB gzipped, zero runtime dependencies. React 17+ is an optional peer dependency — the core algorithm and vanilla-JS API run with no framework. Requires a browser that supports variable fonts and `font-variation-settings` (all evergreen browsers; Chrome/Edge 62+, Firefox 62+, Safari 11+). On touch devices with no cursor, field and character modes have no pointer to track; legibility mode applies its boost statically.
+**Compatibility:** ~5 kB gzipped, zero runtime dependencies. React 17+ is an optional peer dependency — the main entry also exports the hook and components, so it imports `react`; without React, import the vanilla API from `@overpunch/magnettype/core`. Requires a browser that supports variable fonts and `font-variation-settings` (all evergreen browsers; Chrome/Edge 62+, Firefox 62+, Safari 11+). On touch devices with no cursor, field and character modes have no pointer to track; legibility mode applies its boost statically.
 
 ---
 
@@ -166,7 +166,7 @@ import { MagnetTypeText } from '@overpunch/magnettype'
 ### Vanilla JS — field mode
 
 ```ts
-import { startMagnetType, removeMagnetType, getCleanHTML } from '@overpunch/magnettype'
+import { startMagnetType, removeMagnetType, getCleanHTML } from '@overpunch/magnettype/core'
 
 const el = document.querySelector('p')
 const original = getCleanHTML(el)
@@ -189,7 +189,7 @@ document.fonts.ready.then(run)
 ### Vanilla JS — legibility mode
 
 ```ts
-import { applyMagnetType, removeMagnetType, getCleanHTML } from '@overpunch/magnettype'
+import { applyMagnetType, removeMagnetType, getCleanHTML } from '@overpunch/magnettype/core'
 
 const el = document.querySelector('p')
 const original = getCleanHTML(el)
@@ -240,9 +240,9 @@ const legibilityOpts: MagnetTypeOptions = {
 | `magnetMode` | `'attract'` | *(field mode)* `'attract'` — near words approach `peakValue`. `'repel'` — near words stay at `restValue`, far words approach `peakValue` |
 | `scope` | `'document'` | `'document'` — cursor events listened on the document, enabling cross-element effects. `'element'` — events restricted to the target element |
 | `props` | `undefined` | Additional CSS effects driven by cursor proximity. `{ opacity: [rest, peak] }` fades words/chars; `{ italic: true }` toggles italic at strength > 0.5 |
-| `wdthBoost` | `6` | *(legibility mode)* `wdth` units added to confusable characters, scaled by risk: `il1I` (risk 3) get the full boost; `r 0 O` (risk 2) get ⅔; `n m o b d p q c e` (risk 1) get ⅓ |
-| `stabilizeLayout` | `true` | Apply compensating letter-spacing to keep line lengths stable as font weight changes. Disable for natural bold spacing |
-| `cachePositions` | `true` | Cache word/character centre positions to avoid `getBoundingClientRect` on every `mousemove`. Disable if the element is inside a custom scroll container |
+| `wdthBoost` | `6` | *(legibility mode)* `wdth` units added to confusable characters, scaled by risk: `il1I` (risk 3) get the full boost; `r 0 O` (risk 2) get ⅔; `n m o b d p q c e` (risk 1) get ⅓. The default is subtle — see [Legibility mode](#legibility-mode) |
+| `stabilizeLayout` | `true` | *(word mode)* Cancel each word's width change with letter-spacing, so lines don't reflow as the axes change (your own letter-spacing is kept). Disable for natural bold spacing |
+| `cachePositions` | `true` | Cache word/character centre positions to avoid `getBoundingClientRect` on every `mousemove`. Rebuilt when the element moves or resizes (including inside scrolled or transformed containers), on viewport resize and after fonts load |
 | `transitionMs` | `0` | Duration in ms for CSS transition back to rest when cursor leaves. `0` = instant snap. Cleared on the next `mousemove` so live tracking is not delayed |
 | `as` | `'p'` | HTML element to render. *(React component only)* |
 
@@ -269,15 +269,21 @@ Each word's `font-variation-settings` interpolates between `restValue` and `peak
 
 ### Legibility mode
 
-magnetType scans text nodes recursively and checks each character against a built-in confusable character table. Confusable characters are wrapped in `mt-char` spans with a `wdth` boost proportional to risk level. Non-confusable characters pass through as plain text nodes.
+magnetType scans text nodes recursively and checks each character (grapheme, so accents stay with their letter) against a built-in confusable character table. Confusable characters are wrapped in `mt-char` spans; near the cursor they get a `wdth` boost proportional to risk level, around the text's own width. At rest they carry no styles of their own, so kerning and ligatures are unchanged. Non-confusable characters pass through as plain text nodes.
 
-### No layout shift
+The effect needs a font with a `wdth` axis (Roboto Flex, for example); Inter and Source Serif have none, so nothing changes. It is subtle at the default boost: in Roboto Flex at 20px, `l` widens by about 0.03px at full strength, and `I` and `l` get the same boost. Try `wdthBoost` 30 or more to see it.
 
-Field mode and block mode drive only `font-variation-settings` on per-word or per-character spans. If you use only a `wght` axis, advance widths are unaffected and no reflow occurs. If you include a `wdth` axis, character advance widths change and lines may reflow — consider constraining axis ranges or pairing with a `scaleX` transform.
+### Markup and accessibility
+
+Words and characters are wrapped in place: the original elements, their listeners and form values are kept, and styles, scripts, text areas and SVG are left alone. The text stays in the DOM, so screen readers read it as before (no `aria-hidden` copies, no `aria-label`). `stop()` and `removeMagnetType()` put the original text nodes back; `getCleanHTML()` returns the original markup. Word mode keeps each word's own weight and axes in proportion: bold text inside the element stays bolder than its neighbours, and other axes are kept. A tap on a touch screen doesn't leave a word lit, and scrolling under a still cursor updates the effect.
+
+### Layout stability
+
+Changing `wght` does change advance widths: from 300 to 800, a line of Roboto Flex grew 13% and Inter 9% in our measurements. With `stabilizeLayout` (the default), word mode measures each word at nine points from rest to peak and cancels its width change with letter-spacing; across 54 cursor positions over a Roboto Flex paragraph no line break changed. Legibility mode is not stabilized; large `wdthBoost` values can move line breaks.
 
 ### `prefers-reduced-motion`
 
-All three modes respect `prefers-reduced-motion: reduce`. If the media query matches at activation time, field mode (`startMagnetType`) and legibility mode (`applyMagnetType`) return immediately — restoring the original markup without wrapping words/characters or starting the rAF loop — and block mode (`MagnetChar`) skips attaching its `mousemove`/`scroll` listeners, so the text renders statically at `minWeight`. No cursor-driven motion runs for users who have requested reduced motion.
+All three modes respect `prefers-reduced-motion: reduce`. If the media query matches at activation time, field mode (`startMagnetType`) and legibility mode (`applyMagnetType`) return immediately, leaving the element untouched; if the reader turns it on while the effect runs, the effect stops and restores the element. Block mode (`MagnetChar`) skips attaching its `mousemove`/`scroll` listeners, so the text renders statically at `minWeight`. No cursor-driven motion runs for users who have requested reduced motion.
 
 ---
 

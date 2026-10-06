@@ -6,19 +6,20 @@ import dts from 'vite-plugin-dts'
 export default defineConfig({
 	plugins: [
 		react(),
-		dts({ include: ['src'], exclude: ['src/__tests__/**'], rollupTypes: true }),
+		dts({ include: ['src'], exclude: ['src/__tests__/**', 'src/framer/**', 'src/webflow/**'], rollupTypes: true }),
 	],
 	build: {
 		lib: {
-			entry: 'src/index.ts',
+			entry: { index: 'src/index.ts', core: 'src/core.ts' },
 			formats: ['es', 'cjs'],
-			fileName: (format) => `index.${format === 'es' ? 'js' : 'cjs'}`,
+			fileName: (format, entryName) => `${entryName}.${format === 'es' ? 'js' : 'cjs'}`,
 		},
 		rollupOptions: {
 			external: ['react', 'react-dom', 'react/jsx-runtime'],
 			output: {
 				globals: { react: 'React', 'react-dom': 'ReactDOM' },
-				banner: '"use client";',
+				// Only the React entry is a client module; /core is plain JS, safe on the server.
+				banner: (chunk) => (chunk.name === 'index' ? '"use client";' : ''),
 			},
 		},
 	},
