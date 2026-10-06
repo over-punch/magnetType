@@ -194,6 +194,20 @@ function autoInit(): void {
 		} else {
 			init()
 		}
+		// Elements added later (CMS lists, interactions) are set up when they appear. Removed elements stop
+		// by themselves on the next cursor move.
+		if (typeof MutationObserver !== 'undefined' && document.body) {
+			new MutationObserver((records) => {
+				for (const rec of records) {
+					rec.addedNodes.forEach((n) => {
+						if (!(n instanceof HTMLElement) || !n.isConnected) return
+						const found = n.matches(`[${OPT_IN_ATTR}]`) ? [n] : []
+						n.querySelectorAll<HTMLElement>(`[${OPT_IN_ATTR}]`).forEach((el) => found.push(el))
+						for (const el of found) if (!INSTANCES.has(el)) initElement(el)
+					})
+				}
+			}).observe(document.body, { childList: true, subtree: true })
+		}
 	}
 	if (document.readyState === 'loading') {
 		document.addEventListener('DOMContentLoaded', run, { once: true })
