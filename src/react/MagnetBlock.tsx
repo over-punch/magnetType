@@ -451,21 +451,6 @@ export const MagnetChar = forwardRef<HTMLElement, MagnetCharProps>(
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 		}, [stabilizeLayout, spreadRadius, minWeight, maxWeight, children, JSON.stringify(fixedAxes)])
 
-		/** Extract plain text from React children for use as aria-label */
-		const ariaLabel = useMemo(() => {
-			if (!spreadRadius) return undefined
-			function extractText(node: React.ReactNode): string {
-				if (typeof node === 'string' || typeof node === 'number') return String(node)
-				if (Array.isArray(node)) return node.map(extractText).join('')
-				if (React.isValidElement(node)) {
-					const el = node as React.ReactElement<{ children?: React.ReactNode }>
-					return extractText(el.props.children)
-				}
-				return ''
-			}
-			return extractText(children) || undefined
-		}, [children, spreadRadius])
-
 		const processedChildren = useMemo(() => {
 			if (!spreadRadius) return children
 
@@ -474,14 +459,15 @@ export const MagnetChar = forwardRef<HTMLElement, MagnetCharProps>(
 
 			function processNode(node: React.ReactNode): React.ReactNode {
 				if (typeof node === 'string') {
-					return [...node].map(char => {
+					// Graphemes, so emoji sequences and accents stay whole. The characters stay readable to
+					// screen readers (no aria-hidden, no aria-label on the element).
+					return splitGraphemes(node).map(char => {
 						if (/\s/.test(char)) return char
 						const i = idx++
 						return (
 							<span
 								key={i}
 								ref={el => { charSpansRef.current[i] = el }}
-								aria-hidden="true"
 								style={{ fontVariationSettings: buildVS(minWeight) }}
 							>
 								{char}
@@ -507,7 +493,6 @@ export const MagnetChar = forwardRef<HTMLElement, MagnetCharProps>(
 			<Tag
 				ref={mergedRef}
 				className={className}
-				aria-label={ariaLabel}
 				style={{ fontVariationSettings: buildVS(minWeight), ...style }}
 			>
 				{processedChildren}
@@ -517,6 +502,16 @@ export const MagnetChar = forwardRef<HTMLElement, MagnetCharProps>(
 )
 
 MagnetChar.displayName = 'MagnetChar'
+
+type GraphemeSegmenter = { segment: (text: string) => Iterable<{ segment: string }> }
+const graphemeSegmenter: GraphemeSegmenter | null = typeof Intl !== 'undefined' && 'Segmenter' in Intl
+	? new (Intl as unknown as { Segmenter: new (l: undefined, o: { granularity: 'grapheme' }) => GraphemeSegmenter }).Segmenter(undefined, { granularity: 'grapheme' })
+	: null
+
+/** Split text into graphemes (code points when Intl.Segmenter is unavailable). */
+function splitGraphemes(text: string): string[] {
+	return graphemeSegmenter ? Array.from(graphemeSegmenter.segment(text), (s) => s.segment) : [...text]
+}
 
 /** @deprecated Use MagnetChar instead */
 export const MagnetBlock = MagnetChar
