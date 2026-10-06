@@ -1,7 +1,7 @@
 // magnetType/src/core/adjust.ts — framework-agnostic magnetType: wraps words (word mode) or confusable
 // characters (legibility mode) in place, keeping the text, markup and listeners, and varies their axes
 // with cursor proximity around the author's own values.
-import { MAGNET_TYPE_CLASSES, CONFUSABLE, type MagnetTypeOptions, type MagnetTypeProps } from './types'
+import { MAGNET_TYPE_CLASSES, LEGIBILITY_TREATMENTS, type MagnetTypeOptions, type MagnetTypeProps } from './types'
 
 // ─── Resolved defaults ────────────────────────────────────────────────────────
 
@@ -11,7 +11,9 @@ const DEFAULTS = {
 	radius: 120,
 	falloff: 'quadratic' as const,
 	magnetMode: 'attract' as const,
-	wdthBoost: 6,
+	wdthBoost: 30,
+	wghtBoost: 200,
+	trackBoost: 0.08,
 	scope: 'document' as const,
 }
 
@@ -232,8 +234,9 @@ function collectTextNodes(root: Node, collected: Text[] = []): Text[] {
 	return collected
 }
 
-/** A piece of a text node: wrapped in a span (with a risk level in legibility mode) or left as text. */
-type Piece = { text: string; wrap: boolean; risk?: number }
+/** A piece of a text node: wrapped in a span or left as text. In legibility mode, `track` is +1 for an `r`
+ *  followed by `n`/`m` (space added after it) and -1 for that `n`/`m` (the space taken back after it). */
+type Piece = { text: string; wrap: boolean; track?: number }
 
 /** Word mode pieces: each word wrapped; spaces stay as text. Unspaced scripts are split into words. */
 function wordPieces(text: string): Piece[] {
@@ -250,23 +253,32 @@ function wordPieces(text: string): Piece[] {
 	return out
 }
 
-/** Legibility mode pieces: confusable graphemes wrapped (with their risk level); runs of other text left alone. */
+/** Legibility mode pieces: graphemes with a legibility treatment wrapped, and the `n`/`m` after an `r`;
+ *  runs of other text left alone. */
 function confusablePieces(text: string): Piece[] {
 	const out: Piece[] = []
-	for (const g of graphemes(text)) {
-		const risk = CONFUSABLE[g[0]]
-		if (risk !== undefined) out.push({ text: g, wrap: true, risk })
+	const gs = graphemes(text)
+	for (let k = 0; k < gs.length; k++) {
+		const g = gs[k]
+		const partner = k > 0 && gs[k - 1] === 'r' && (g === 'n' || g === 'm')
+		if (g === 'r') {
+			const next = gs[k + 1]
+			if (next === 'n' || next === 'm') { out.push({ text: g, wrap: true, track: 1 }); continue }
+		} else if (partner) {
+			out.push({ text: g, wrap: true, track: -1 }); continue
+		}
+		if (g[0] !== 'r' && LEGIBILITY_TREATMENTS[g[0]]) out.push({ text: g, wrap: true })   // base letter: a decomposed ï is an i
 		else if (out.length && !out[out.length - 1].wrap) out[out.length - 1].text += g
 		else out.push({ text: g, wrap: false })
 	}
 	return out
 }
 
-/** Wrap an element's text in place; returns the spans with their risk levels. */
-function wrap(element: HTMLElement, split: (text: string) => Piece[], className: string): { span: HTMLElement; risk: number }[] {
+/** Wrap an element's text in place; returns the spans with their spacing role (legibility mode). */
+function wrap(element: HTMLElement, split: (text: string) => Piece[], className: string): { span: HTMLElement; track: number }[] {
 	const cleanHTML = element.innerHTML
 	const wrapped: Wrapped[] = []
-	const spans: { span: HTMLElement; risk: number }[] = []
+	const spans: { span: HTMLElement; track: number }[] = []
 	for (const textNode of collectTextNodes(element)) {
 		const text = textNode.data
 		if (!text || !/\S/.test(text) || !textNode.parentNode) continue
@@ -277,7 +289,7 @@ function wrap(element: HTMLElement, split: (text: string) => Piece[], className:
 			const span = document.createElement('span')
 			span.className = className
 			span.textContent = p.text
-			spans.push({ span, risk: p.risk ?? 0 })
+			spans.push({ span, track: p.track ?? 0 })
 			return span
 		})
 		const fragment = document.createDocumentFragment()
@@ -345,7 +357,9 @@ function runEffect(element: HTMLElement, originalHTML: string, options: MagnetTy
 	const cachePositions = options.cachePositions ?? true
 	const axes = kind === 'word' ? validAxes(options.axes) : {}
 	const wdthBoost = finiteOr(options.wdthBoost, DEFAULTS.wdthBoost, 'wdthBoost')
-	const stabilize = kind === 'word' && (options.stabilizeLayout ?? true)
+	const wghtBoost = finiteOr(options.wghtBoost, DEFAULTS.wghtBoost, 'wghtBoost')
+	const trackBoost = finiteOr(options.trackBoost, DEFAULTS.trackBoost, 'trackBoost')
+	const stabilize = options.stabilizeLayout ?? true
 
 	const scrollY = window.scrollY
 
@@ -375,6 +389,8 @@ function runEffect(element: HTMLElement, originalHTML: string, options: MagnetTy
 		return b
 	})
 	const graphemeCount = spans.map((s) => Math.max(1, graphemes(s.textContent ?? '').length))
+	/** Legibility mode: each span's font size in px (for trackBoost, in em). */
+	const fontPx = kind === 'legibility' ? spans.map((s) => parseFloat(getComputedStyle(s).fontSize) || 16) : []
 
 	/** Axis values for a span at proximity t: the axes describe the element's own text; text with its own
 	 *  weight (bold, light) or axes keeps its difference from the element. */
@@ -394,8 +410,18 @@ function runEffect(element: HTMLElement, originalHTML: string, options: MagnetTy
 	/** font-variation-settings for a span at proximity t. */
 	const fvsAt = (i: number, t: number): string => {
 		if (kind === 'word') return mergeAxes(spanBase[i], wordValues(i, t))
-		const own = spanBase[i].value('wdth') ?? 100
-		return mergeAxes(spanBase[i], { wdth: own + wdthBoost * (items[i].risk / 3) * t })
+		const tr = LEGIBILITY_TREATMENTS[(spans[i].textContent ?? '')[0]]
+		const values: Record<string, number> = {}
+		if (tr?.wdth) values.wdth = Math.max(1, (spanBase[i].value('wdth') ?? 100) + wdthBoost * tr.wdth * t)
+		if (tr?.wght) values.wght = Math.max(1, Math.min(1000, (spanBase[i].value('wght') ?? 400) + wghtBoost * tr.wght * t))
+		return mergeAxes(spanBase[i], values)
+	}
+	/** Legibility mode: the deliberate extra space (px) on a span at proximity t — after an r before n/m, taken back after the n/m. */
+	const trackAt = (i: number, t: number): number => {
+		if (kind !== 'legibility' || !items[i].track) return 0
+		// The n/m takes back exactly what its r added, at the r's strength (the r is the span just before it).
+		const tt = items[i].track < 0 ? Math.max(0, lastT[i - 1]) : t
+		return items[i].track * trackBoost * fontPx[items[i].track < 0 ? i - 1 : i] * tt
 	}
 
 	// --- stabilizeLayout: each word's own width change from rest, cancelled with letter-spacing. Width is
@@ -433,13 +459,16 @@ function runEffect(element: HTMLElement, originalHTML: string, options: MagnetTy
 	/** Last proximity written per span (-1 = not written), so unchanged spans are not rewritten. */
 	const lastT = new Float64Array(spans.length).fill(-1)
 	const lastStrength = new Float64Array(spans.length).fill(-1)
+	/** Legibility mode: the r's proximity when its n/m partner was last written. */
+	const lastPartnerT = new Float64Array(spans.length).fill(-1)
 
 	/** Write one span's state for proximity strength s (rest: the cursor is gone — rest values in either mode). */
 	const writeSpan = (i: number, strength: number, rest = false) => {
 		const t = rest ? 0 : repel ? 1 - strength : strength
 		const tq = Math.round(t * 1000) / 1000
 		const sq = Math.round(strength * 1000) / 1000
-		if (tq === lastT[i] && sq === lastStrength[i]) return
+		const partnerT = kind === 'legibility' && items[i].track < 0 ? lastT[i - 1] : -1
+		if (tq === lastT[i] && sq === lastStrength[i] && partnerT === lastPartnerT[i]) return
 		const span = spans[i]
 		if (kind === 'legibility' && tq === 0) {
 			// At rest the character carries no styles of its own, so it shapes with its neighbours.
@@ -447,17 +476,19 @@ function runEffect(element: HTMLElement, originalHTML: string, options: MagnetTy
 		} else {
 			span.style.fontVariationSettings = fvsAt(i, tq)
 		}
-		if (stabilize && widthGain) {
-			const comp = gainAt(i, tq) / graphemeCount[i]
-			if (Math.abs(comp) < 0.0005) span.style.removeProperty('letter-spacing')
-			else span.style.letterSpacing = `${(spanBase[i].letterSpacing - comp).toFixed(3)}px`
+		const extra = trackAt(i, tq)
+		if ((stabilize && widthGain) || extra) {
+			const comp = stabilize && widthGain ? gainAt(i, tq) / graphemeCount[i] : 0
+			if (Math.abs(comp - extra) < 0.0005) span.style.removeProperty('letter-spacing')
+			else span.style.letterSpacing = `${(spanBase[i].letterSpacing - comp + extra).toFixed(3)}px`
 		}
 		if (props) applyProps(span, props, sq)
 		lastT[i] = tq
 		lastStrength[i] = sq
+		lastPartnerT[i] = partnerT
 	}
 
-	// Rest state: words at their rest axes, confusable characters untouched.
+	// Rest state: words at their rest axes, legibility characters untouched.
 	if (stabilize) measureWidths()
 	for (let i = 0; i < spans.length; i++) writeSpan(i, 0, true)
 
@@ -623,14 +654,16 @@ function runEffect(element: HTMLElement, originalHTML: string, options: MagnetTy
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Start the legibility effect on an element: visually confusable characters (il1I, rn/m, 0O…) near
- * the cursor get a wdth boost proportional to their confusion risk, around the text's own width.
- * At rest the characters carry no styles of their own, so kerning and ligatures are kept. Needs a
- * font with a wdth axis.
+ * Start the legibility effect on an element: near the cursor, characters that are easy to confuse are
+ * told apart (see LEGIBILITY_TREATMENTS): `I` widens, `l` and `1` get heavier, `0` narrows and `O`
+ * widens, and an `r` before `n`/`m` gets extra space so "rn" can't read as "m". With stabilizeLayout
+ * (default) each character's width change is cancelled with letter-spacing, so lines don't rewrap. At
+ * rest the characters carry no styles of their own, so kerning and ligatures are kept. The axis changes
+ * need `wdth`/`wght` axes; the r–n spacing works in any font.
  *
  * @param element      - Target element (in the live DOM and visible)
  * @param originalHTML - Clean HTML snapshot from getCleanHTML()
- * @param options      - MagnetTypeOptions; wdthBoost, radius, falloff, scope, props, transitionMs used
+ * @param options      - MagnetTypeOptions; wdthBoost, wghtBoost, trackBoost, stabilizeLayout, radius, falloff, scope, props, transitionMs used
  * @returns            - A stop function. Call it to remove the listeners and restore the element.
  *
  * @security originalHTML is assigned to innerHTML (when it differs from the element) without

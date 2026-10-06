@@ -12,6 +12,24 @@ export const CONFUSABLE: Record<string, number> = {
 	'c': 1, 'e': 1,                    // similar bowls
 }
 
+/**
+ * How legibility mode tells confusable characters apart at full cursor strength. Each value is a fraction
+ * of an option: `wdth` of `wdthBoost` (negative narrows), `wght` of `wghtBoost`, `track` of `trackBoost`
+ * (extra space after the character, used for `r` only when an `n` or `m` follows, so "rn" can't read as "m").
+ * Members of the same confusion group get different treatments, so they stop looking alike:
+ * `I` widens, `l` gets heavier, `1` gets heavier and a little wider, `i` slightly heavier; `0` narrows and
+ * `O` widens. Characters not listed here are left alone.
+ */
+export const LEGIBILITY_TREATMENTS: Record<string, { wdth?: number; wght?: number; track?: number }> = {
+	'I': { wdth: 1 },
+	'l': { wght: 1 },
+	'1': { wght: 1, wdth: 0.5 },
+	'i': { wght: 0.5 },
+	'0': { wdth: -1 },
+	'O': { wdth: 1 },
+	'r': { track: 1 },
+}
+
 /** Falloff curve for the cursor proximity field */
 export type FalloffType = 'linear' | 'quadratic'
 
@@ -115,13 +133,22 @@ export interface MagnetTypeOptions {
 	// ── legibility mode options ─────────────────────────────────────────────────
 
 	/**
-	 * wdth axis units to add to confusable characters at full cursor strength. Default: 6
-	 *
-	 * Risk 1 characters receive wdthBoost × (1/3) at peak.
-	 * Risk 2 characters receive wdthBoost × (2/3) at peak.
-	 * Risk 3 characters receive wdthBoost × (3/3) = full boost at peak.
+	 * wdth axis units for the characters that widen or narrow (see LEGIBILITY_TREATMENTS) at full cursor
+	 * strength, around the text's own width. Needs a font with a `wdth` axis. Default: 30
 	 */
 	wdthBoost?: number
+
+	/**
+	 * wght axis units for the characters that get heavier (see LEGIBILITY_TREATMENTS) at full cursor
+	 * strength, around the text's own weight. Needs a variable weight. Default: 200
+	 */
+	wghtBoost?: number
+
+	/**
+	 * Extra space, in em, after an `r` followed by `n` or `m` at full cursor strength (taken back after the
+	 * `n`/`m`, so the line keeps its length). Works in any font. Default: 0.08
+	 */
+	trackBoost?: number
 
 	// ── performance options ─────────────────────────────────────────────────────
 

@@ -165,17 +165,16 @@ describe('magnetType', () => {
 		stop()
 	})
 
-	it('applyMagnetType applies wdth boost when cursor is directly over a char span', () => {
+	it('legibility: a capital I widens by wdthBoost under the cursor', () => {
 		// Capture rAF callback without auto-firing — avoids infinite recursion from frame self-scheduling
 		let pendingRaf: FrameRequestCallback | null = null
 		const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
 			pendingRaf = cb; return 0
 		})
 
-		const el = makeElement('i')
+		const el = makeElement('I')
 		const original = getCleanHTML(el)
-		// risk-3 char, wdthBoost 6, cursor at (5, 10) — char rect is {left:0, top:0, width:10, height:20}
-		// center=(5,10), dist=0, strength=1, boost = 6 * (3/3) * 1 = 6, wdth = 106
+		// Capital I widens by the full wdthBoost: cursor at the char's centre (5, 10), strength 1, wdth 100 + 6
 		const stop = applyMagnetType(el, original, { mode: 'legibility', wdthBoost: 6, radius: 200 })
 
 		// Flush scroll-restore rAF, then clear
@@ -192,7 +191,7 @@ describe('magnetType', () => {
 		rafSpy.mockRestore()
 	})
 
-	it('applyMagnetType applies partial wdth boost to risk-2 char at full strength', () => {
+	it('legibility: a zero narrows (the opposite of O) under the cursor', () => {
 		let pendingRaf: FrameRequestCallback | null = null
 		const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
 			pendingRaf = cb; return 0
@@ -200,7 +199,7 @@ describe('magnetType', () => {
 
 		const el = makeElement('0')
 		const original = getCleanHTML(el)
-		// risk-2 char, wdthBoost 6, cursor centered on span: boost = 6 * (2/3) * 1 = 4, wdth = 104
+		// 0 narrows by the full wdthBoost (O widens), so the two stop looking alike: wdth 100 - 6
 		const stop = applyMagnetType(el, original, { mode: 'legibility', wdthBoost: 6, radius: 200 })
 		if (pendingRaf) { pendingRaf(0); pendingRaf = null }
 
@@ -208,29 +207,30 @@ describe('magnetType', () => {
 		if (pendingRaf) { pendingRaf(0); pendingRaf = null }
 
 		const span = el.querySelector<HTMLElement>(`.${MAGNET_TYPE_CLASSES.char}`)
-		expect(span?.style.fontVariationSettings).toContain('"wdth" 104')
+		expect(span?.style.fontVariationSettings).toContain('"wdth" 94')
 
 		stop()
 		rafSpy.mockRestore()
 	})
 
-	it('applyMagnetType applies partial wdth boost to risk-1 char at full strength', () => {
+	it('legibility: l gets heavier, not wider, so it differs from I', () => {
 		let pendingRaf: FrameRequestCallback | null = null
 		const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
 			pendingRaf = cb; return 0
 		})
 
-		const el = makeElement('n')
+		const el = makeElement('l')
 		const original = getCleanHTML(el)
-		// risk-1 char, wdthBoost 6, cursor centered: boost = 6 * (1/3) * 1 = 2, wdth = 102
-		const stop = applyMagnetType(el, original, { mode: 'legibility', wdthBoost: 6, radius: 200 })
+		// l: wght 400 + wghtBoost 150 at full strength; no wdth change
+		const stop = applyMagnetType(el, original, { mode: 'legibility', wghtBoost: 150, radius: 200 })
 		if (pendingRaf) { pendingRaf(0); pendingRaf = null }
 
 		document.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 10, bubbles: true }))
 		if (pendingRaf) { pendingRaf(0); pendingRaf = null }
 
 		const span = el.querySelector<HTMLElement>(`.${MAGNET_TYPE_CLASSES.char}`)
-		expect(span?.style.fontVariationSettings).toContain('"wdth" 102')
+		expect(span?.style.fontVariationSettings).toContain('"wght" 550')
+		expect(span?.style.fontVariationSettings).not.toContain('wdth')
 
 		stop()
 		rafSpy.mockRestore()
@@ -552,7 +552,7 @@ describe('magnetType', () => {
 			pendingRaf = cb; return 0
 		})
 
-		const el = makeElement('i')
+		const el = makeElement('I')   // I widens (i only gets heavier)
 		const original = getCleanHTML(el)
 		const stop = applyMagnetType(el, original, {
 			mode: 'legibility',
@@ -676,11 +676,12 @@ describe('review fixes', () => {
 	})
 
 	it('wraps decomposed accents with their letter', () => {
-		const el = makeElement('café ï')
+		// Decomposed: i + U+0308 and O + U+0301 stay with their base letter (looked up by the base letter)
+		const el = makeElement('nai\u0308ve O\u0301')
 		const stop = applyMagnetType(el, el.innerHTML, {})
 		const texts = Array.from(el.querySelectorAll(`.${MAGNET_TYPE_CLASSES.char}`), (s) => s.textContent)
-		expect(texts).toContain('é')
-		expect(texts).toContain('ï')
+		expect(texts).toContain('i\u0308')
+		expect(texts).toContain('O\u0301')
 		stop()
 	})
 
@@ -710,5 +711,54 @@ describe('review fixes', () => {
 		const cb = pendingRaf as FrameRequestCallback | null
 		cb?.(0)
 		expect(remove.mock.calls.some(([type]) => type === 'mousemove')).toBe(true)
+	})
+})
+
+describe('legibility rework (2026-10)', () => {
+	it('an r before n gets extra space that the n takes back, so the line keeps its length', () => {
+		let pendingRaf: FrameRequestCallback | null = null
+		const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => { pendingRaf = cb; return 0 })
+		const el = makeElement('rn')
+		el.style.fontSize = '20px'
+		const stop = applyMagnetType(el, getCleanHTML(el), { mode: 'legibility', trackBoost: 0.1, radius: 200 })
+		const run = () => { const f = pendingRaf; pendingRaf = null; f?.(0) }
+		run()
+		document.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 10, bubbles: true }))
+		run()
+		const [r, n] = Array.from(el.querySelectorAll<HTMLElement>(`.${MAGNET_TYPE_CLASSES.char}`))
+		expect(r.textContent).toBe('r')
+		expect(n.textContent).toBe('n')
+		// Up to 0.1em × 20px = 2px at full strength; the n takes back exactly what the r adds at the same strength
+		const rs = parseFloat(r.style.letterSpacing), ns = parseFloat(n.style.letterSpacing)
+		expect(rs).toBeGreaterThan(1)
+		expect(rs).toBeLessThanOrEqual(2)
+		expect(ns).toBeCloseTo(-rs, 3)
+		stop()
+		rafSpy.mockRestore()
+	})
+
+	it('an r or n on its own is left alone', () => {
+		const el = makeElement('run no')
+		const stop = applyMagnetType(el, getCleanHTML(el), { mode: 'legibility' })
+		expect(el.querySelectorAll(`.${MAGNET_TYPE_CLASSES.char}`).length).toBe(0)
+		stop()
+	})
+
+	it('I and l get different treatments (width vs weight)', () => {
+		let pendingRaf: FrameRequestCallback | null = null
+		const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => { pendingRaf = cb; return 0 })
+		const el = makeElement('Il')
+		const stop = applyMagnetType(el, getCleanHTML(el), { mode: 'legibility', radius: 200 })
+		const run = () => { const f = pendingRaf; pendingRaf = null; f?.(0) }
+		run()
+		document.dispatchEvent(new MouseEvent('mousemove', { clientX: 5, clientY: 10, bubbles: true }))
+		run()
+		const [I, l] = Array.from(el.querySelectorAll<HTMLElement>(`.${MAGNET_TYPE_CLASSES.char}`))
+		expect(parseFloat(I.style.fontVariationSettings.split('"wdth"')[1])).toBeGreaterThan(120)   // default wdthBoost 30
+		expect(I.style.fontVariationSettings).not.toContain('wght')
+		expect(parseFloat(l.style.fontVariationSettings.split('"wght"')[1])).toBeGreaterThan(550)   // default wghtBoost 200
+		expect(l.style.fontVariationSettings).not.toContain('wdth')
+		stop()
+		rafSpy.mockRestore()
 	})
 })
