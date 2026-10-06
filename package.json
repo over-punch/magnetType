@@ -1,6 +1,6 @@
 {
 	"name": "@overpunch/magnettype",
-	"version": "1.2.7",
+	"version": "1.3.0",
 	"description": "Cursor-field per-word variable font axis variation and per-character legibility mode",
 	"type": "module",
 	"main": "dist/index.cjs",
