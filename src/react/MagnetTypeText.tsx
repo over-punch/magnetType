@@ -14,7 +14,7 @@ interface MagnetTypeTextProps extends MagnetTypeOptions, Omit<React.HTMLAttribut
 
 /** MagnetTypeOptions keys: consumed by the hook, not forwarded to the DOM element. */
 const OPTION_KEYS: (keyof MagnetTypeOptions)[] = [
-	'mode', 'scope', 'radius', 'falloff', 'props', 'axes', 'magnetMode', 'wdthBoost', 'cachePositions', 'stabilizeLayout', 'transitionMs',
+	'mode', 'scope', 'radius', 'falloff', 'props', 'axes', 'magnetMode', 'wdthBoost', 'wghtBoost', 'trackBoost', 'cachePositions', 'stabilizeLayout', 'transitionMs',
 ]
 
 /**

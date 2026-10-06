@@ -40,8 +40,12 @@ interface MagnetTypeFramerProps {
 	magnetMode: "attract" | "repel"
 	/** Keep line lengths stable by compensating letter-spacing as weight rises (word mode). */
 	stabilizeLayout: boolean
-	/** wdth units added to confusable characters at full cursor strength (legibility mode). */
+	/** Legibility mode: wdth units for I, 1, 0, O at full cursor strength. */
 	wdthBoost: number
+	/** Legibility mode: wght units for l, 1, i at full cursor strength. */
+	wghtBoost: number
+	/** Legibility mode: em of space after an r before n/m at full cursor strength. */
+	trackBoost: number
 	/** Pixel radius over which the field effect fades. */
 	radius: number
 	/** Falloff curve for cursor proximity strength. */
@@ -80,7 +84,9 @@ export default function MagnetType(props: Partial<MagnetTypeFramerProps>) {
 		axisPeak = 700,
 		magnetMode = "attract",
 		stabilizeLayout = true,
-		wdthBoost = 6,
+		wdthBoost = 30,
+		wghtBoost = 200,
+		trackBoost = 0.08,
 		radius = 160,
 		falloff = "quadratic",
 		scope = "element",
@@ -118,6 +124,9 @@ export default function MagnetType(props: Partial<MagnetTypeFramerProps>) {
 				? applyMagnetType(el, original, {
 						mode: "legibility",
 						wdthBoost,
+						wghtBoost,
+						trackBoost,
+						stabilizeLayout,
 						radius,
 						falloff,
 						scope,
@@ -151,6 +160,8 @@ export default function MagnetType(props: Partial<MagnetTypeFramerProps>) {
 		magnetMode,
 		stabilizeLayout,
 		wdthBoost,
+		wghtBoost,
+		trackBoost,
 		radius,
 		falloff,
 		scope,
@@ -229,11 +240,29 @@ addPropertyControls(MagnetType, {
 	wdthBoost: {
 		type: ControlType.Number,
 		title: "wdth boost",
-		defaultValue: 6,
+		defaultValue: 30,
 		min: 0,
-		max: 40,
+		max: 80,
 		step: 1,
-		description: "Legibility mode: wdth units added to confusable chars at peak.",
+		description: "Legibility mode: wdth units for I, 1, 0 (narrows) and O at peak.",
+	},
+	wghtBoost: {
+		type: ControlType.Number,
+		title: "wght boost",
+		defaultValue: 200,
+		min: 0,
+		max: 500,
+		step: 10,
+		description: "Legibility mode: wght units for l, 1 and i at peak.",
+	},
+	trackBoost: {
+		type: ControlType.Number,
+		title: "r–n space",
+		defaultValue: 0.08,
+		min: 0,
+		max: 0.3,
+		step: 0.01,
+		description: "Legibility mode: em of space after an r before n or m.",
 	},
 	radius: { type: ControlType.Number, title: "Radius", defaultValue: 160, min: 20, max: 600, step: 10, unit: "px" },
 	falloff: {

@@ -62,7 +62,9 @@ function parseAxes(raw: string): Record<string, [number, number]> | undefined {
  *   data-mt-falloff           — linear | quadratic
  *   data-mt-axes              — field-mode axis map, e.g. "wght:300,500;wdth:80,120"
  *   data-mt-magnet-mode       — attract | repel (field mode)
- *   data-mt-wdth-boost        — wdth units added to confusable chars (legibility mode)
+ *   data-mt-wdth-boost        — legibility mode: wdth units for I, 1, 0, O (default 30)
+ *   data-mt-wght-boost        — legibility mode: wght units for l, 1, i (default 200)
+ *   data-mt-track-boost       — legibility mode: em of space after an r before n/m (default 0.08)
  *   data-mt-opacity           — "rest,peak" opacity pair, e.g. "1,0.6"
  *   data-mt-italic            — "true" to italicise spans past half strength
  *   data-mt-cache-positions   — "false" to disable page-relative position caching
@@ -98,6 +100,14 @@ function readOptions(el: HTMLElement): MagnetTypeOptions {
 	if (d.mtWdthBoost !== undefined) {
 		const n = parseFloat(d.mtWdthBoost)
 		if (!isNaN(n)) opts.wdthBoost = n
+	}
+	if (d.mtWghtBoost !== undefined) {
+		const n = parseFloat(d.mtWghtBoost)
+		if (!isNaN(n)) opts.wghtBoost = n
+	}
+	if (d.mtTrackBoost !== undefined) {
+		const n = parseFloat(d.mtTrackBoost)
+		if (!isNaN(n)) opts.trackBoost = n
 	}
 
 	// props (opacity, italic) — only construct the object when at least one is set
