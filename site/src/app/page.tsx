@@ -5,7 +5,6 @@ import { version } from "../../../package.json"
 import { version as siteVersion } from "../../package.json"
 import SiteFooter from "../components/SiteFooter"
 import PortsSection from "../components/PortsSection"
-import { MagnetChar } from "@overpunch/magnettype"
 
 export default function Home() {
 	return (
@@ -46,7 +45,7 @@ export default function Home() {
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="font-semibold text-foreground text-base">Field mode vs legibility mode</p>
-						<p>Field mode runs a requestAnimationFrame loop driven by cursor position. Legibility mode tells visually confusable characters apart as the cursor comes near: I widens, l and 1 get heavier, 0 narrows while O widens, and an r before n or m gets a small gap. Their width changes are cancelled, so lines don't move; at rest they are left exactly as the font draws them. The shape changes need wdth and wght axes; the r–n gap works in any font.</p>
+						<p>Field mode runs a requestAnimationFrame loop driven by cursor position. Legibility mode tells visually confusable characters apart as the cursor comes near: I widens, l and 1 get heavier, 0 narrows while O widens, and an r before n or m gets a small gap. Their width changes are cancelled, so lines don&apos;t move; at rest they are left exactly as the font draws them. The shape changes need wdth and wght axes; the r–n gap works in any font.</p>
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="font-semibold text-foreground text-base">Performance via rAF batching</p>

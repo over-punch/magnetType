@@ -329,7 +329,7 @@ export default function Demo() {
 			{mode === 'legibility' && (
 				<>
 					<p className="text-xs text-muted mb-8">
-						Legibility mode tells confusable characters apart: I widens, l and 1 get heavier, 0 narrows while O widens, and an r before n or m gets a small gap. Move your cursor over the text — characters near it change most, fading out by distance, and lines don't move. On touch screens it follows your finger while it drags over the text.
+						Legibility mode tells confusable characters apart: I widens, l and 1 get heavier, 0 narrows while O widens, and an r before n or m gets a small gap. Move your cursor over the text — characters near it change most, fading out by distance, and lines don&apos;t move. On touch screens it follows your finger while it drags over the text.
 					</p>
 					<MagnetTypeText
 						mode="legibility"
